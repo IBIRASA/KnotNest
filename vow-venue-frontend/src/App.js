@@ -1,11 +1,15 @@
-import './App.css';
-
+import React from 'react';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import LandingPage from './components/LandingPage';
+import EventList from './pages/Eventslist';
 function App() {
   return (
-    <div style={{ textAlign: 'center', padding: '50px' }}>
-      <h1>Welcome to Vow Venue</h1>
-      <p>Plan your wedding venue with ease!</p>
-    </div>
+    <Router>
+      <Routes>
+        <Route path="/" element={<LandingPage />} />
+        <Route path="/eventlist" element={<EventList />} />
+      </Routes>
+    </Router>
   );
 }
 
