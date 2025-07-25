@@ -9,7 +9,6 @@ KnotNest is a web application built with Django (backend) and React (frontend) t
 - Venue search based on budget and location
 - User authentication
 - Responsive UI
--
 
 ### Backend Setup
 
