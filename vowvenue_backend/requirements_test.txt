@@ -1,0 +1,10 @@
+asgiref==3.8.1
+Django==5.2.3
+djangorestframework==3.16.0
+sqlparse==0.5.3
+typing_extensions==4.14.0
+django-cors-headers
+
+pytest==7.4.0
+pytest-django==4.5.2
+factory-boy==3.2.1

@@ -1,0 +1,16 @@
+version: '3.9'
+
+services:
+  frontend:
+    build:
+      context: ./vow-venue-frontend
+    ports:
+      - '3001:80'
+    depends_on:
+      - backend
+
+  backend:
+    build:
+      context: ./vowvenue_backend
+    ports:
+      - '8001:8000'

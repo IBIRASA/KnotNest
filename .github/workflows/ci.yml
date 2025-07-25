@@ -1,0 +1,50 @@
+name: CI Pipeline
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  backend-tests:
+    name: Django Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+      - name: Install dependencies
+        run: |
+          pip install django
+      - name: Run tests
+        working-directory: vowvenue_backend
+        run: python manage.py test
+
+  frontend-lint:
+    name: React Lint
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+
+      - name: Install dependencies
+        run: |
+          cd vow-venue-frontend
+          npm install
+
+      - name: Run linter
+        run: |
+          cd vow-venue-frontend
+          npx eslint . || true
+      - name: Run Frontend Tests
+        run: |
+          cd vow-venue-frontend
+          npm test -- --ci --watchAll=false
