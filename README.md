@@ -6,57 +6,75 @@ KnotNest is a web application built with Django (backend) and React (frontend) t
 
 ## Features
 
-- Venue search based on budget and location
-- User authentication
+- Venue search
 - Responsive UI
--
+  -Docker-based multi-service architecture
+  -Infrastructure as Code (IaC) using Terraform
+
+## Project Structure
+
+### Backend/ # Django backend
+
+### Frontend/ # React frontend
+
+### Terraform / # Infrastructure as Code (IaC) using Terraform
+
+### docker-compose.yml # Docker multi-service setup
+
+### Dockerfile(s) # Service-specific Dockerfiles
+
+### README.md # Project documentation
 
 ### Backend Setup
 
-1. Create and activate a Python virtual environment:
+## Prerequisites
 
-   ```bash
-   python3 -m venv env
-   source env/bin/activate
-   ```
+- [Docker](https://docs.docker.com/get-docker/)
+- [Docker Compose](https://docs.docker.com/compose/install/)
+- [Terraform](https://developer.hashicorp.com/terraform/install)
+- [Azure CLI](https://learn.microsoft.com/en-us/cli/azure/install-azure-cli)
 
-2. Install backend dependencies:
-   ```bash
-   pip install -r requirements.txt
-   ```
-3. Run database migrations:
-   ```bash
-   python manage.py migrate
-   ```
-4. Start backend server:
-   ```bash
-   python manage.py runserver
-   ```
+## Running Locally with Docker
 
-### Frontend Setup
+```bash
+git clone https://github.com/IBIRASA/KnotNest.git
+cd KnotNest
 
-1. Navigate to frontend folder:
+```
 
-   ```bash
-   cd vow-venue-frontend
-   ```
+## Build and run the containers
 
-2. Install frontend dependencies:
-   ```bash
-   npm install
-   ```
-3. Start frontend server:
-   ```bash
-   npm start
-   ```
+```bash
+docker-compose up --build
 
-### Running Tests
+```
 
-1. Backend tests:
-   ```bash
-   python manage.py test
-   ```
-   2.Frontend lint:
-   ```bash
-   npx eslint src
-   ```
+## stopping container
+
+```bash
+docker-compose stop
+
+```
+
+## Infrastructure Delpoyment with Terraform
+
+### Navigate to the terraform directory
+
+```bash
+cd terraform
+
+```
+
+### Initialize Terraform
+
+```bash
+terraform init
+
+```
+
+### Apply the terraform configuration
+
+```bash
+terraform apply
+
+```
