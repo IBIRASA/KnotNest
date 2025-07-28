@@ -44,7 +44,7 @@ jobs:
         run: |
           python manage.py test
 
-      - name: Set up Node.js
+      - name: Use Node.js
         uses: actions/setup-node@v3
         with:
           node-version: "20"
@@ -82,3 +82,7 @@ jobs:
         run: |
           docker push ${{ secrets.DOCKER_USERNAME }}/vowvenue-backend:latest
           docker push ${{ secrets.DOCKER_USERNAME }}/vowvenue-frontend:latest
+
+      - name: Install dependencies
+        run: |
+           pip install -r vowvenue_backend/requirements.txt
