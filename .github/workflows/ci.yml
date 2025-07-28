@@ -1,50 +1,104 @@
-name: CI Pipeline
+name: CI/CD Pipeline
 
 on:
+  push:
+    branches:
+      - main
   pull_request:
-    branches: [main]
+    branches:
+      - main
 
 jobs:
-  backend-tests:
-    name: Django Tests
+  build-and-deploy:
     runs-on: ubuntu-latest
+    env:
+      DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+      DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+    services:
+      postgres:
+        image: postgres:14
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: mydb
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
 
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout Code
+        uses: actions/checkout@v3
 
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: "3.10"
-      - name: Install dependencies
-        run: |
-          pip install django
-      - name: Run tests
+
+      - name: Install Backend Dependencies
         working-directory: vowvenue_backend
+        run: pip install -r requirements.txt
+
+      - name: Wait for Database to be Ready
+        run: |
+          until pg_isready -h localhost -p 5432 -U postgres; do
+            echo "Waiting for database to be ready..."
+            sleep 2
+          done
+
+      - name: Run Backend Tests
+        working-directory: vowvenue_backend
+        env:
+          DATABASE_URL: postgres://postgres:postgres@postgres:5432/mydb
         run: python manage.py test
-
-  frontend-lint:
-    name: React Lint
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v3
 
       - name: Set up Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: 18
+          node-version: "20"
 
-      - name: Install dependencies
-        run: |
-          cd vow-venue-frontend
-          npm install
+      - name: Install Frontend Dependencies
+        working-directory: vow-venue-frontend
+        run: npm install
 
-      - name: Run linter
-        run: |
-          cd vow-venue-frontend
-          npx eslint . || true
       - name: Run Frontend Tests
+        working-directory: vow-venue-frontend
+        run: npm test -- --watchAll=false
+
+      - name: Scan for Vulnerabilities (Frontend)
+        working-directory: vow-venue-frontend
+        run: npm audit --audit-level=high || true
+
+      - name: Scan for Vulnerabilities (Backend)
+        working-directory: vowvenue_backend
         run: |
-          cd vow-venue-frontend
-          npm test -- --ci --watchAll=false
+          pip install safety
+          safety check || true
+
+      - name: Verify Docker Credentials
+        run: |
+          if [ -z "${{ secrets.DOCKER_USERNAME }}" ] || [ -z "${{ secrets.DOCKER_PASSWORD }}" ]; then
+            echo "Docker credentials not set!"
+            exit 1
+          else
+            echo "Docker credentials are set."
+          fi
+
+      - name: Log in to Docker Hub
+        run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+
+      - name: Build Docker Images (Frontend)
+        run: |
+          docker build -t ${{ secrets.DOCKER_USERNAME }}/vowvenue-frontend:latest ./vow-venue-frontend
+
+      - name: Build Docker Images (Backend)
+        run: |
+          docker build -t ${{ secrets.DOCKER_USERNAME }}/vowvenue-backend:latest ./vowvenue_backend
+
+      - name: Push Docker Images to Docker Hub
+        run: |
+          docker push ${{ secrets.DOCKER_USERNAME }}/vowvenue-frontend:latest
+          docker push ${{ secrets.DOCKER_USERNAME }}/vowvenue-backend:latest
