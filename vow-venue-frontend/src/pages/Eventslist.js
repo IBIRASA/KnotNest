@@ -29,10 +29,9 @@ const EventList = () => {
     fetchEvents();
   }, []);
 
-  // Event handlers
   const handleEdit = (id) => {
     console.log('Edit event with ID:', id);
-    // Add your edit logic here
+   
   };
 
   const handleDelete = (id) => {
