@@ -3,6 +3,6 @@ import App from './App';
 
 test('renders welcome message', () => {
   render(<App />);
-  const linkElement = screen.getByText(/welcome to vow venue/i);
-  expect(linkElement).toBeInTheDocument();
+  const text = screen.getByText(/plan your dream wedding effortlessly/i);
+  expect(text).toBeInTheDocument();
 });
