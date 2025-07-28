@@ -27,13 +27,12 @@ jobs:
       # 3. Install backend dependencies
       - name: Install backend dependencies
         run: |
-          cd backend
           pip install -r requirements.txt
 
       # 4. Run backend tests
       - name: Run backend tests
         run: |
-          cd backend
+          cd vowvenue_backend
           python manage.py test
 
       # 5. Set up Node.js for the frontend
@@ -45,13 +44,13 @@ jobs:
       # 6. Install frontend dependencies
       - name: Install frontend dependencies
         run: |
-          cd frontend
+          cd vow-venue-frontend
           npm install
 
       # 7. Run frontend tests
       - name: Run frontend tests
         run: |
-          cd frontend
+          cd vow-venue-frontend
           npm test -- --ci --watchAll=false
 
   security-scan:
@@ -66,14 +65,14 @@ jobs:
       # 2. Run security scan for Python dependencies
       - name: Security Scan for Backend (Python)
         run: |
-          cd backend
+          cd vowvenue_backend
           pip install pip-audit
           pip-audit
 
       # 3. Run security scan for frontend dependencies
       - name: Security Scan for Frontend (Node)
         run: |
-          cd frontend
+          cd vow-venue-frontend
           npm audit --audit-level=moderate || true
 
       # 4. Scan Docker images with Trivy
