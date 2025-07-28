@@ -43,7 +43,7 @@ jobs:
       - name: Run Backend Tests
         working-directory: vowvenue_backend
         env:
-          DATABASE_URL: postgres://postgres:postgres@localhost:5432/mydb
+          DATABASE_URL: postgres://postgres:postgres@postgres:5432/mydb  # Updated here
         run: python manage.py test
 
       - name: Use Node.js
