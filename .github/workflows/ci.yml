@@ -86,3 +86,8 @@ jobs:
       - name: Install dependencies
         run: |
            pip install -r vowvenue_backend/requirements.txt
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: npm test -- --watchAll=false
