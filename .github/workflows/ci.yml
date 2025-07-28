@@ -80,6 +80,12 @@ jobs:
         run: |
           echo "Username present: ${{ secrets.DOCKER_USERNAME != '' }}"
           echo "Password length: $(echo -n ${{ secrets.DOCKER_PASSWORD }} | wc -c)"
+      - name: Verify secrets
+        run: |
+          if [ -z "${{ secrets.DOCKER_USERNAME }}" ] || [ -z "${{ secrets.DOCKER_PASSWORD }}" ]; then
+             echo "Docker credentials not set!"
+              exit 1
+             fi
 
 
       - name: Log in to Docker Hub
