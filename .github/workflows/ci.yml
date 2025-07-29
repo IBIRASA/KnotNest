@@ -36,7 +36,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: "3.10"
+          python-version: '3.10'
 
       - name: Install Backend Dependencies
         working-directory: vowvenue_backend
@@ -58,7 +58,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: "20"
+          node-version: '20'
 
       - name: Install Frontend Dependencies
         working-directory: vow-venue-frontend
@@ -102,3 +102,5 @@ jobs:
         run: |
           docker push ${{ secrets.DOCKER_USERNAME }}/vowvenue-frontend:latest
           docker push ${{ secrets.DOCKER_USERNAME }}/vowvenue-backend:latest
+      - name: Log out from Docker Hub
+        run: docker logout
