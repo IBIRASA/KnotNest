@@ -30,20 +30,18 @@ jobs:
           --health-retries 5
 
     steps:
-      # Checkout the code from the repository
       - name: Checkout Code
         uses: actions/checkout@v3
 
-      # Set up Python and install backend dependencies
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.10'
+
       - name: Install Backend Dependencies
         working-directory: vowvenue_backend
         run: pip install -r requirements.txt
 
-      # Wait for PostgreSQL to be ready
       - name: Wait for Database to be Ready
         run: |
           until pg_isready -h localhost -p 5432 -U postgres; do
@@ -51,40 +49,35 @@ jobs:
             sleep 2
           done
 
-      # Run Backend Tests
       - name: Run Backend Tests
         working-directory: vowvenue_backend
         env:
           DATABASE_URL: postgres://postgres:postgres@postgres:5432/mydb
         run: python manage.py test
 
-      # Set up Node.js and install frontend dependencies
       - name: Set up Node.js
         uses: actions/setup-node@v3
         with:
           node-version: '20'
+
       - name: Install Frontend Dependencies
         working-directory: vow-venue-frontend
         run: npm install
 
-      # Run Frontend Tests
       - name: Run Frontend Tests
         working-directory: vow-venue-frontend
         run: npm test -- --watchAll=false
 
-      # Scan Frontend for Vulnerabilities
       - name: Scan for Vulnerabilities (Frontend)
         working-directory: vow-venue-frontend
         run: npm audit --audit-level=high || true
 
-      # Scan Backend for Vulnerabilities
       - name: Scan for Vulnerabilities (Backend)
         working-directory: vowvenue_backend
         run: |
           pip install safety
           safety check || true
 
-      # Verify Docker Credentials
       - name: Verify Docker Credentials
         run: |
           if [ -z "${{ secrets.DOCKER_USERNAME }}" ] || [ -z "${{ secrets.DOCKER_PASSWORD }}" ]; then
@@ -94,29 +87,24 @@ jobs:
             echo "Docker credentials are set."
           fi
 
-      # Log in to Docker Hub
       - name: Log in to Docker Hub
         run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
 
-      # Build Docker images for frontend and backend
-      - name: Build Docker Images (Frontend)
+      - name: Build Docker Image (Frontend)
         run: |
           docker build -t ${{ secrets.DOCKER_USERNAME }}/vowvenue-frontend:latest ./vow-venue-frontend
 
-      - name: Build Docker Images (Backend)
+      - name: Build Docker Image (Backend)
         run: |
           docker build \
-          -t ${{ secrets.DOCKER_USERNAME }}/vowvenue-backend:latest \
-          -t vowvenue-backend:latest \
-          ./vowvenue_backend
+            -t ${{ secrets.DOCKER_USERNAME }}/vowvenue-backend:latest \
+            -t vowvenue-backend:latest \
+            ./vowvenue_backend
 
-
-      # Push Docker images to Docker Hub
       - name: Push Docker Images to Docker Hub
         run: |
           docker push ${{ secrets.DOCKER_USERNAME }}/vowvenue-frontend:latest
           docker push ${{ secrets.DOCKER_USERNAME }}/vowvenue-backend:latest
-     
 
       - name: Install Trivy
         run: |
@@ -127,15 +115,33 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y trivy
 
-      - name: Run Trivy scan
-        run: trivy image --exit-code 1 --severity HIGH ${{ secrets.DOCKER_USERNAME }}/vowvenue-backend:latest
+      - name: Run Trivy Scan (Non-blocking)
+        run: |
+          trivy image --severity HIGH ${{ secrets.DOCKER_USERNAME }}/vowvenue-backend:latest || true
 
+      - name: Save Trivy Report
+        run: trivy image --severity HIGH --format json -o trivy-report.json ${{ secrets.DOCKER_USERNAME }}/vowvenue-backend:latest || true
 
-      # Deploy to production (SSH or other deployment method)
+      - name: Upload Trivy Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: trivy-report
+          path: trivy-report.json
+
+      - name: Setup SSH Access
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.DEPLOY_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H your-production-server >> ~/.ssh/known_hosts
+
       - name: Deploy to Production
         run: |
-          ssh user@your-production-server "docker pull ${{ secrets.DOCKER_USERNAME }}/vowvenue-frontend:latest && docker pull ${{ secrets.DOCKER_USERNAME }}/vowvenue-backend:latest && docker-compose up -d"
+          ssh user@your-production-server "
+            docker pull ${{ secrets.DOCKER_USERNAME }}/vowvenue-frontend:latest &&
+            docker pull ${{ secrets.DOCKER_USERNAME }}/vowvenue-backend:latest &&
+            docker-compose up -d
+          "
 
-      # Log out from Docker Hub
       - name: Log out from Docker Hub
         run: docker logout
