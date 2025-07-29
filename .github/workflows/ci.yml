@@ -113,11 +113,16 @@ jobs:
           docker push ${{ secrets.DOCKER_USERNAME }}/vowvenue-frontend:latest
           docker push ${{ secrets.DOCKER_USERNAME }}/vowvenue-backend:latest
 
-      # Scan the backend image for vulnerabilities
-      - name: Scan Backend Docker Image for Vulnerabilities
+      - name: Install Trivy
         run: |
-          pip install trivy
-          trivy image --exit-code 1 --severity HIGH ${{ secrets.DOCKER_USERNAME }}/vowvenue-backend:latest
+          sudo apt-get update
+          sudo apt-get install -y wget apt-transport-https gnupg lsb-release
+          wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | sudo apt-key add -
+          echo deb https://aquasecurity.github.io/trivy-repo/deb $(lsb_release -sc) main | sudo tee -a /etc/apt/sources.list.d/trivy.list
+          sudo apt-get update
+          sudo apt-get install -y trivy
+      - name: Run Trivy vulnerability scanner
+        run: trivy image --exit-code 1 --severity HIGH vowvenue-backend:latest
 
       # Deploy to production (SSH or other deployment method)
       - name: Deploy to Production
