@@ -128,14 +128,12 @@ jobs:
           name: trivy-report
           path: trivy-report.json
 
-
       - name: Deploy to Production
         run: |
-          ssh user@your-production-server "
-            docker pull ${{ secrets.DOCKER_USERNAME }}/vowvenue-frontend:latest &&
-            docker pull ${{ secrets.DOCKER_USERNAME }}/vowvenue-backend:latest &&
-            docker-compose up -d
-          "
+          ssh azureuser@172.191.230.37"
+          docker pull ${{ secrets.DOCKER_USERNAME }}/vowvenue-frontend:latest &&
+          docker pull ${{ secrets.DOCKER_USERNAME }}/vowvenue-backend:latest &&
+          docker-compose up -d
 
       - name: Log out from Docker Hub
         run: docker logout
