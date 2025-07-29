@@ -130,10 +130,8 @@ jobs:
 
       - name: Deploy to Production
         run: |
-          ssh azureuser@172.191.230.37"
-          docker pull ${{ secrets.DOCKER_USERNAME }}/vowvenue-frontend:latest &&
+          ssh azureuser@172.191.230.37 "docker pull ${{ secrets.DOCKER_USERNAME }}/vowvenue-frontend:latest &&
           docker pull ${{ secrets.DOCKER_USERNAME }}/vowvenue-backend:latest &&
-          docker-compose up -d
-
+          docker-compose up -d"
       - name: Log out from Docker Hub
         run: docker logout
