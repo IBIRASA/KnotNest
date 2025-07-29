@@ -121,7 +121,8 @@ jobs:
           echo deb https://aquasecurity.github.io/trivy-repo/deb $(lsb_release -sc) main | sudo tee -a /etc/apt/sources.list.d/trivy.list
           sudo apt-get update
           sudo apt-get install -y trivy
-      - name: Run Trivy vulnerability scanner
+
+      - name: Run Trivy scan
         run: trivy image --exit-code 1 --severity HIGH vowvenue-backend:latest
 
       # Deploy to production (SSH or other deployment method)
