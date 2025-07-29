@@ -128,13 +128,6 @@ jobs:
           name: trivy-report
           path: trivy-report.json
 
-      - name: Setup SSH Access
-        run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.DEPLOY_KEY }}" > ~/.ssh/id_rsa
-          chmod 600 ~/.ssh/id_rsa
-          ssh-keyscan -H YOUR_SERVER_IP_OR_DOMAIN >> ~/.ssh/known_hosts
-
 
       - name: Deploy to Production
         run: |
