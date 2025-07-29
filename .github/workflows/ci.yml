@@ -133,7 +133,8 @@ jobs:
           mkdir -p ~/.ssh
           echo "${{ secrets.DEPLOY_KEY }}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
-          ssh-keyscan -H your-production-server >> ~/.ssh/known_hosts
+          ssh-keyscan -H YOUR_SERVER_IP_OR_DOMAIN >> ~/.ssh/known_hosts
+
 
       - name: Deploy to Production
         run: |
