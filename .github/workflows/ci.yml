@@ -105,13 +105,18 @@ jobs:
 
       - name: Build Docker Images (Backend)
         run: |
-          docker build -t ${{ secrets.DOCKER_USERNAME }}/vowvenue-backend:latest ./vowvenue_backend
+          docker build \
+          -t ${{ secrets.DOCKER_USERNAME }}/vowvenue-backend:latest \
+          -t vowvenue-backend:latest \
+          ./vowvenue_backend
+
 
       # Push Docker images to Docker Hub
       - name: Push Docker Images to Docker Hub
         run: |
           docker push ${{ secrets.DOCKER_USERNAME }}/vowvenue-frontend:latest
           docker push ${{ secrets.DOCKER_USERNAME }}/vowvenue-backend:latest
+     
 
       - name: Install Trivy
         run: |
@@ -123,7 +128,8 @@ jobs:
           sudo apt-get install -y trivy
 
       - name: Run Trivy scan
-        run: trivy image --exit-code 1 --severity HIGH vowvenue-backend:latest
+        run: trivy image --exit-code 1 --severity HIGH ${{ secrets.DOCKER_USERNAME }}/vowvenue-backend:latest
+
 
       # Deploy to production (SSH or other deployment method)
       - name: Deploy to Production
