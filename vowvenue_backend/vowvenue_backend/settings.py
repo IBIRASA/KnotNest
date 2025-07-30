@@ -48,9 +48,11 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+     
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
+    'events.middleware.Ignore404LoggingMiddleware', 
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
@@ -128,18 +130,23 @@ TIME_ZONE = 'UTC'
 USE_I18N = True
 
 USE_TZ = True
-
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
 
+    'filters': {
+        'skip_404_errors': {
+            '()': 'django.utils.log.CallbackFilter',
+            'callback': lambda record: not (
+                record.levelname == 'ERROR' and
+                'Not Found' in record.getMessage()
+            ),
+        },
+    },
+
     'formatters': {
         'verbose': {
             'format': '[{asctime}] {levelname} {name} {message}',
-            'style': '{',
-        },
-        'simple': {
-            'format': '{levelname} {message}',
             'style': '{',
         },
     },
@@ -147,28 +154,38 @@ LOGGING = {
     'handlers': {
         'console': {
             'class': 'logging.StreamHandler',
-            'formatter': 'verbose',  # or 'simple' if you prefer
+            'formatter': 'verbose',
+            'filters': ['skip_404_errors'],  # skips 404 error logs to reduce noise
         },
+    },
+
+    'loggers': {
+        'django.server': {
+            'handlers': ['console'],
+            'level': 'ERROR',
+            'propagate': False,
+        },
+        'django': {
+            'handlers': ['console'],
+            'level': 'INFO',
+            'propagate': True,
+        },
+        'events.views': {
+           'handlers': ['console'],
+           'level': 'INFO',
+           'propagate': False,
+},
+
     },
 
     'root': {
         'handlers': ['console'],
         'level': 'INFO',
     },
-
-    'loggers': {
-        'django': {
-            'handlers': ['console'],
-            'level': 'INFO',
-            'propagate': True,
-        },
-        'myapp': {  # Replace 'myapp' with your Django app name
-            'handlers': ['console'],
-            'level': 'DEBUG',
-            'propagate': False,
-        },
-    }
 }
+
+
+
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
