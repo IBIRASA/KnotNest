@@ -80,6 +80,5 @@ terraform apply
 ```
 
 ## Live URLs
-
 - Frontend: https://knot-frontend.ashysea-fcb2b410.eastus.azurecontainerapps.io
 - Backend: https://knot-backend.ashysea-fcb2b410.eastus.azurecontainerapps.io
