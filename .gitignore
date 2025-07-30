@@ -14,3 +14,4 @@ terraform/*.zip
 *.tfstate
 *.tfstate.backup
 .terraform/
+azure-credentials.json
