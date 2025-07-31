@@ -146,22 +146,27 @@ jobs:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
       # Deploy to Production (Using Azure CLI)
-            # Deploy to Production (Using Azure CLI)
+       # Deploy to Production (Using Azure CLI)
       - name: Deploy to Production (Using Azure CLI)
         run: |
           az vm run-command invoke \
             --resource-group knotnest-rg \
             --name knotnest-vm \
             --command-id RunShellScript \
-            --scripts "cd /home/azureuser/KnotNest && \
-              docker pull ${{ secrets.DOCKER_USERNAME }}/vowvenue-frontend:latest && \
-              docker pull ${{ secrets.DOCKER_USERNAME }}/vowvenue-backend:latest && \
-              docker-compose down && \
-              docker-compose up -d --force-recreate"
-
-
-
-      # Log out from Docker Hub
+            --scripts "
+              cd /home/azureuser || exit 1
+            if [ ! -d KnotNest ]; then
+              git clone https://github.com/IBIRASA/KnotNest.git
+            else
+              cd KnotNest && git pull origin main
+            fi
+            cd KnotNest
+            docker pull ${{ secrets.DOCKER_USERNAME }}/vowvenue-frontend:latest
+            docker pull ${{ secrets.DOCKER_USERNAME }}/vowvenue-backend:latest
+            docker-compose down
+            docker-compose up -d --force-recreate
+      "
+           # Log out from Docker Hub
       - name: Log out from Docker Hub
         run: docker logout
       - name: Install django-prometheus explicitly
