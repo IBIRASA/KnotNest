@@ -2,15 +2,13 @@ version: '3.9'
 
 services:
   frontend:
-    build:
-      context: ./vow-venue-frontend
+    image: ibirasa/vowvenue-frontend:latest
     ports:
       - '3001:80'
     depends_on:
       - backend
 
   backend:
-    build:
-      context: ./vowvenue_backend
+    image: ibirasa/vowvenue-backend:latest
     ports:
       - '8001:8000'
