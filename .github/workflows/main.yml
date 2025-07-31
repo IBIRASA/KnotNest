@@ -34,7 +34,6 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v3
 
-      # Set up Python
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
@@ -44,7 +43,6 @@ jobs:
         working-directory: vowvenue_backend
         run: pip install -r requirements.txt
 
-      # Wait for Database to be ready
       - name: Wait for Database to be Ready
         run: |
           until pg_isready -h localhost -p 5432 -U postgres; do
@@ -58,7 +56,6 @@ jobs:
           DATABASE_URL: postgres://postgres:postgres@postgres:5432/mydb
         run: python manage.py test
 
-      # Set up Node.js
       - name: Set up Node.js
         uses: actions/setup-node@v3
         with:
@@ -94,26 +91,17 @@ jobs:
       - name: Log in to Docker Hub
         run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
 
-      # Build Docker Image (Frontend)
       - name: Build Docker Image (Frontend)
-        run: |
-          docker build -t ${{ secrets.DOCKER_USERNAME }}/vowvenue-frontend:latest ./vow-venue-frontend
+        run: docker build -t ${{ secrets.DOCKER_USERNAME }}/vowvenue-frontend:latest ./vow-venue-frontend
 
-      # Build Docker Image (Backend)
       - name: Build Docker Image (Backend)
-        run: |
-          docker build \
-            -t ${{ secrets.DOCKER_USERNAME }}/vowvenue-backend:latest \
-            -t vowvenue-backend:latest \
-            ./vowvenue_backend
+        run: docker build -t ${{ secrets.DOCKER_USERNAME }}/vowvenue-backend:latest ./vowvenue_backend
 
-      # Push Docker Images to Docker Hub
       - name: Push Docker Images to Docker Hub
         run: |
           docker push ${{ secrets.DOCKER_USERNAME }}/vowvenue-frontend:latest
           docker push ${{ secrets.DOCKER_USERNAME }}/vowvenue-backend:latest
 
-      # Install Trivy
       - name: Install Trivy
         run: |
           sudo apt-get update
@@ -123,30 +111,23 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y trivy
 
-      # Run Trivy Scan (Non-blocking)
       - name: Run Trivy Scan (Non-blocking)
-        run: |
-          trivy image --severity HIGH ${{ secrets.DOCKER_USERNAME }}/vowvenue-backend:latest || true
+        run: trivy image --severity HIGH ${{ secrets.DOCKER_USERNAME }}/vowvenue-backend:latest || true
 
-      # Save Trivy Report
       - name: Save Trivy Report
         run: trivy image --severity HIGH --format json -o trivy-report.json ${{ secrets.DOCKER_USERNAME }}/vowvenue-backend:latest || true
 
-      # Upload Trivy Report
       - name: Upload Trivy Report
         uses: actions/upload-artifact@v4
         with:
           name: trivy-report
           path: trivy-report.json
 
-      # Log in to Azure (using creds)
       - name: Log in to Azure
         uses: azure/login@v1
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      # Deploy to Production (Using Azure CLI)
-       # Deploy to Production (Using Azure CLI)
       - name: Deploy to Production (Using Azure CLI)
         run: |
           az vm run-command invoke \
@@ -155,24 +136,17 @@ jobs:
             --command-id RunShellScript \
             --scripts "
               cd /home/azureuser || exit 1
-            if [ ! -d KnotNest ]; then
-              git clone https://github.com/IBIRASA/KnotNest.git
-            else
-              cd KnotNest && git pull origin main
-            fi
-            cd KnotNest
-            docker pull ${{ secrets.DOCKER_USERNAME }}/vowvenue-frontend:latest
-            docker pull ${{ secrets.DOCKER_USERNAME }}/vowvenue-backend:latest
-            docker-compose down
-            docker-compose up -d --force-recreate
-      "
-           # Log out from Docker Hub
+              if [ ! -d KnotNest ]; then
+                git clone https://github.com/IBIRASA/KnotNest.git
+              else
+                cd KnotNest && git pull origin main
+              fi
+              cd KnotNest
+              docker pull ${{ secrets.DOCKER_USERNAME }}/vowvenue-frontend:latest
+              docker pull ${{ secrets.DOCKER_USERNAME }}/vowvenue-backend:latest
+              docker-compose down
+              docker-compose up -d --force-recreate
+            "
+
       - name: Log out from Docker Hub
         run: docker logout
-      - name: Install django-prometheus explicitly
-        working-directory: vowvenue_backend
-        run: pip install django-prometheus
-      - name: Install Backend Dependencies
-        working-directory: vowvenue_backend
-        run: pip install -r requirements.txt
-
