@@ -146,13 +146,19 @@ jobs:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
       # Deploy to Production (Using Azure CLI)
+            # Deploy to Production (Using Azure CLI)
       - name: Deploy to Production (Using Azure CLI)
         run: |
           az vm run-command invoke \
             --resource-group knotnest-rg \
             --name knotnest-vm \
             --command-id RunShellScript \
-            --scripts "docker pull ${{ secrets.DOCKER_USERNAME }}/vowvenue-frontend:latest && docker pull ${{ secrets.DOCKER_USERNAME }}/vowvenue-backend:latest && docker-compose down && docker-compose pull && docker-compose up -d"
+            --scripts "cd /home/azureuser/KnotNest && \
+              docker pull ${{ secrets.DOCKER_USERNAME }}/vowvenue-frontend:latest && \
+              docker pull ${{ secrets.DOCKER_USERNAME }}/vowvenue-backend:latest && \
+              docker-compose down && \
+              docker-compose up -d --force-recreate"
+
 
 
       # Log out from Docker Hub
