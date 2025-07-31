@@ -22,3 +22,14 @@
 
 - Initial release with backend (Django) and frontend (React) applications
 - Dockerized microservices: Django backend, React frontend, Prometheus for metrics, Grafana for visualization
+
+## [1.0.1] - 2025-07-31
+### Added
+- Monitoring with Prometheus and Grafana
+- Alert rule for Prometheus uptime notifications
+
+### Changed
+- Updated backend metrics endpoint for Prometheus scraping
+
+### Fixed
+- Resolved Docker port conflicts for Grafana and Prometheus containers
