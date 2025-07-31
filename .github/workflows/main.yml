@@ -157,3 +157,10 @@ jobs:
       # Log out from Docker Hub
       - name: Log out from Docker Hub
         run: docker logout
+      - name: Install django-prometheus explicitly
+        working-directory: vowvenue_backend
+        run: pip install django-prometheus
+      - name: Install Backend Dependencies
+        working-directory: vowvenue_backend
+        run: pip install -r requirements.txt
+

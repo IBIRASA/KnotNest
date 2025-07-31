@@ -22,5 +22,6 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/', views.test_api),
     path('api/events/', include('events.urls')),
-    path('', include('django_prometheus.urls')),
+    path('', views.home), 
+    path('metrics/', include('django_prometheus.urls')),
 ]
