@@ -14,7 +14,7 @@ function LandingPage() {
         backgroundPosition: 'center',
         backgroundRepeat: 'no-repeat',
         width: '100vw',
-        height: '100vh'
+        height: '100vh',
       }}
     >
       {/* Dark overlay */}
@@ -46,7 +46,7 @@ function LandingPage() {
           onClick={() => navigate('/eventlist')}
           className="px-5 py-3 rounded"
         >
-          View Venues
+          View Venuesssss
         </Button>
       </div>
     </div>

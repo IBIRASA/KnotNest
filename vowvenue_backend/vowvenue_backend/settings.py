@@ -30,6 +30,7 @@ ALLOWED_HOSTS = [
     'localhost',
     '127.0.0.1',
     'knot-backend.ashysea-fcb2b410.eastus.azurecontainerapps.io', 
+    '0.0.0.0'
 ]
 
 

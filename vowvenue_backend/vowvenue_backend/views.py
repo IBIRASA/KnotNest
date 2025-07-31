@@ -9,5 +9,4 @@ def my_view(request):
     return HttpResponse("Logged successfully.")
 def home(request):
     logger.info("Home page was accessed")
-    return HttpResponse("Welcome to KnotNest Backend API")
-
+    zz
