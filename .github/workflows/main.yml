@@ -152,8 +152,16 @@ jobs:
             --resource-group knotnest-rg \
             --name knotnest-vm \
             --command-id RunShellScript \
-            --scripts "docker pull ${{ secrets.DOCKER_USERNAME }}/vowvenue-frontend:latest && docker pull ${{ secrets.DOCKER_USERNAME }}/vowvenue-backend:latest && docker-compose up -d"
+            --scripts "docker pull ${{ secrets.DOCKER_USERNAME }}/vowvenue-frontend:latest && docker pull ${{ secrets.DOCKER_USERNAME }}/vowvenue-backend:latest && docker-compose down && docker-compose pull && docker-compose up -d"
+
 
       # Log out from Docker Hub
       - name: Log out from Docker Hub
         run: docker logout
+      - name: Install django-prometheus explicitly
+        working-directory: vowvenue_backend
+        run: pip install django-prometheus
+      - name: Install Backend Dependencies
+        working-directory: vowvenue_backend
+        run: pip install -r requirements.txt
+

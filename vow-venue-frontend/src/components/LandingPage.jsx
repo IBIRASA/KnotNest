@@ -46,7 +46,7 @@ function LandingPage() {
           onClick={() => navigate('/eventlist')}
           className="px-5 py-3 rounded"
         >
-          View Venues
+          View Venuesssss
         </Button>
       </div>
     </div>
