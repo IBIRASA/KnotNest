@@ -123,25 +123,21 @@ jobs:
       - name: Deploy to Production (Using Azure CLI)
         run: |
           az vm run-command invoke \
-            --resource-group knotnest-rg \
-            --name knotnest-vm \
-            --command-id RunShellScript \
-            --scripts "
-              cd /home/azureuser || exit 1
-
-              if [ ! -d KnotNest ]; then
-                git clone https://github.com/IBIRASA/KnotNest.git
-              fi
-
-              cd KnotNest
-              git reset --hard HEAD
-              git clean -fd
-              git pull origin main
-
-              docker-compose down
-              docker-compose pull
-              docker-compose up -d --force-recreate
-            "
-
+          --resource-group knotnest-rg \
+          --name knotnest-vm \
+          --command-id RunShellScript \
+           --scripts "
+            cd /home/azureuser || exit 1
+          if [ ! -d KnotNest ]; then
+          git clone https://github.com/IBIRASA/KnotNest.git
+          fi
+            cd KnotNest
+            git reset --hard HEAD
+            git clean -fd
+            git pull origin main
+            docker-compose down
+            docker-compose pull
+            docker-compose up -d --force-recreate
+          "
       - name: Log out from Docker Hub
         run: docker logout
