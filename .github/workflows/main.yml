@@ -134,10 +134,10 @@ jobs:
             cd KnotNest
             git reset --hard HEAD
             git clean -fd
-           git pull origin main
-           docker-compose down
-           docker-compose pull
-           docker-compose up -d --force-recreate
+            git pull origin main
+            docker-compose down
+            docker-compose pull
+            docker-compose up -d --force-recreate
           "
       - name: Log out from Docker Hub
         run: docker logout
