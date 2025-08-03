@@ -1,7 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from 'react-bootstrap';
-
 function LandingPage() {
   const navigate = useNavigate();
 
@@ -14,18 +13,13 @@ function LandingPage() {
         backgroundPosition: 'center',
         backgroundRepeat: 'no-repeat',
         width: '100vw',
-        height: '100vh'
+        height: '100vh',
       }}
     >
-      {/* Dark overlay */}
       <div
         className="position-absolute top-0 start-0 w-100 h-100"
         style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)', zIndex: 1 }}
       />
-
-      {/* Logo */}
-
-      {/* Text content */}
       <div
         className="position-relative text-white text-center ps-5 ms-5"
         style={{ zIndex: 2, maxWidth: '80%' }}
