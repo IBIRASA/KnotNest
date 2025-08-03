@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from 'react-bootstrap';
 function LandingPage() {
   const navigate = useNavigate();
-
   return (
     <div
       className="d-flex flex-column justify-content-center align-items-center w-100 min-vh-100 position-relative"
@@ -42,7 +41,6 @@ function LandingPage() {
 >
   View Venues
 </Button>
-
       </div>
     </div>
   );
