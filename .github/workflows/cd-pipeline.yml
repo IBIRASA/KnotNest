@@ -167,34 +167,33 @@ jobs:
           az --version
 
       - name: Azure Login
-        uses: azure/login@v1
-        with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
-
-      - name: Set Azure Subscription
         run: |
-          az account set --subscription ${{ env.AZURE_SUBSCRIPTION_ID }}
-          az account show
+          az login --service-principal \
+            -u ${{ secrets.AZURE_CLIENT_ID }} \
+            -p ${{ secrets.AZURE_CLIENT_SECRET }} \
+            --tenant ${{ secrets.AZURE_TENANT_ID }}
+            az account set --subscription ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+            az account show
 
       - name: Deploy Backend to Azure Container App
-        run: |
-          az containerapp update \
-            --name knot-backend \
-            --resource-group ${{ env.RESOURCE_GROUP }} \
-            --image ${{ env.ACR_LOGIN_SERVER }}/knot-backend:${{ env.VERSION }} \
-            --cpu 0.5 \
-            --memory 1.0Gi
+          run: |
+            az containerapp update \
+              --name knot-backend \
+              --resource-group ${{ env.RESOURCE_GROUP }} \
+              --image ${{ env.ACR_LOGIN_SERVER }}/knot-backend:${{ env.VERSION }} \
+              --cpu 0.5 \
+              --memory 1.0Gi
 
       - name: Deploy Frontend to Azure Container App
-        run: |
-          az containerapp update \
+          run: |
+            az containerapp update \
             --name knot-frontend \
             --resource-group ${{ env.RESOURCE_GROUP }} \
             --image ${{ env.ACR_LOGIN_SERVER }}/knot-frontend:${{ env.VERSION }} \
             --cpu 0.5 \
             --memory 1.0Gi
+
   post-deployment-verification:
-    
     needs: deploy-production
     if: always()
     runs-on: ubuntu-latest
