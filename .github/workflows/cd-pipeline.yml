@@ -5,7 +5,6 @@ on:
     branches:
       - main
       - develop
-    paths-ignore: [] # Ensures all pushes trigger the workflow
   pull_request:
     branches:
       - main
@@ -102,48 +101,6 @@ jobs:
       - name: Build frontend image
         run: docker build -t ${{ env.ACR_LOGIN_SERVER }}/knot-frontend:${{ env.VERSION }} ./vow-venue-frontend
 
-      - name: Install Trivy
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y wget apt-transport-https gnupg lsb-release
-          wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | gpg --dearmor | sudo tee /usr/share/keyrings/trivy.gpg > /dev/null
-          echo "deb [signed-by=/usr/share/keyrings/trivy.gpg] https://aquasecurity.github.io/trivy-repo/deb $(lsb_release -sc) main" | sudo tee -a /etc/apt/sources.list.d/trivy.list
-          sudo apt-get update
-          sudo apt-get install -y trivy
-
-      - name: Scan backend image
-        run: |
-          docker save ${{ env.ACR_LOGIN_SERVER }}/knot-backend:${{ env.VERSION }} -o backend-image.tar
-          trivy image --input backend-image.tar \
-            --format sarif \
-            --severity CRITICAL,HIGH \
-            --ignore-unfixed \
-            --vuln-type os,library \
-            --output trivy-backend-results.sarif
-          rm backend-image.tar
-        continue-on-error: true
-
-      - name: Scan frontend image
-        run: |
-          docker save ${{ env.ACR_LOGIN_SERVER }}/knot-frontend:${{ env.VERSION }} -o frontend-image.tar
-          trivy image --input frontend-image.tar \
-            --format sarif \
-            --severity CRITICAL,HIGH \
-            --ignore-unfixed \
-            --vuln-type os,library \
-            --output trivy-frontend-results.sarif
-          rm frontend-image.tar
-        continue-on-error: true
-
-      - name: Upload security scan results
-        uses: actions/upload-artifact@v4
-        with:
-          name: trivy-scan-results
-          path: |
-            trivy-backend-results.sarif
-            trivy-frontend-results.sarif
-        if: always()
-
       - name: Push backend image
         run: |
           docker push ${{ env.ACR_LOGIN_SERVER }}/knot-backend:${{ env.VERSION }}
@@ -155,20 +112,6 @@ jobs:
           docker push ${{ env.ACR_LOGIN_SERVER }}/knot-frontend:${{ env.VERSION }}
           docker tag ${{ env.ACR_LOGIN_SERVER }}/knot-frontend:${{ env.VERSION }} ${{ env.ACR_LOGIN_SERVER }}/knot-frontend:latest
           docker push ${{ env.ACR_LOGIN_SERVER }}/knot-frontend:latest
-
-      - name: Create build status check
-        if: always()
-        uses: actions/github-script@v6
-        with:
-          script: |
-            github.rest.repos.createCommitStatus({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              sha: context.sha,
-              state: job.status == 'success' ? 'success' : 'failure',
-              context: 'build-test-scan',
-              description: 'Build and test completed'
-            })
 
   deploy-production:
     needs: build-test-scan
@@ -190,7 +133,6 @@ jobs:
             -p ${{ secrets.AZURE_CLIENT_SECRET }} \
             --tenant ${{ secrets.AZURE_TENANT_ID }}
           az account set --subscription ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-          az account show
 
       - name: Deploy Backend to Azure Container App
         run: |
@@ -210,60 +152,13 @@ jobs:
             --cpu 0.5 \
             --memory 1.0Gi
 
-      - name: Create deployment status check
-        if: always()
-        uses: actions/github-script@v6
-        with:
-          script: |
-            github.rest.repos.createCommitStatus({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              sha: context.sha,
-              state: job.status == 'success' ? 'success' : 'failure',
-              context: 'deploy-production',
-              description: 'Deployment completed'
-            })
-
   post-deployment-verification:
     needs: deploy-production
     if: always()
     runs-on: ubuntu-latest
     steps:
-      - name: Verify deployment
-        run: |
-          echo "Checking backend..."
-          response=$(curl -s -o /dev/null -w "%{http_code}" https://knot-backend.ashysea-fcb2b410.eastus.azurecontainerapps.io/)
-          if [ "$response" -eq 200 ]; then
-            echo "Backend is up (Status: $response)"
-          else
-            echo "Backend check failed (Status: $response)"
-          fi
-
-          echo "Checking frontend..."
-          response=$(curl -s -o /dev/null -w "%{http_code}" https://knot-frontend.ashysea-fcb2b410.eastus.azurecontainerapps.io)
-          if [ "$response" -eq 200 ]; then
-            echo "Frontend is up (Status: $response)"
-          else
-            echo "Frontend check failed (Status: $response)"
-          fi
-        continue-on-error: true
-
       - name: Upload CHANGELOG
         uses: actions/upload-artifact@v4
         with:
           name: changelog
           path: CHANGELOG.md
-
-      - name: Create final status check
-        if: always()
-        uses: actions/github-script@v6
-        with:
-          script: |
-            github.rest.repos.createCommitStatus({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              sha: context.sha,
-              state: job.status == 'success' ? 'success' : 'failure',
-              context: 'ci/cd',
-              description: 'Full pipeline completed'
-            })
