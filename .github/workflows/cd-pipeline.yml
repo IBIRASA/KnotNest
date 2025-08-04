@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - develop
+    paths-ignore: [] # Ensures all pushes trigger the workflow
   pull_request:
     branches:
       - main
@@ -12,7 +13,7 @@ on:
 env:
   DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
   DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
-  ACR_LOGIN_SERVER: ${{ secrets.ACR_LOGIN_SERVER }} # Make sure this secret exists
+  ACR_LOGIN_SERVER: ${{ secrets.ACR_LOGIN_SERVER }}
   AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
   AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
   AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
@@ -21,8 +22,153 @@ env:
   RESOURCE_GROUP: knotnest-rg
 
 jobs:
-  # [Previous build-test-scan job remains exactly the same]
-  # ... keep all existing build-test-scan steps ...
+  build-test-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Generate CHANGELOG
+        run: |
+          echo "## $(date +'%Y-%m-%d') - Version ${VERSION:0:7}" >> CHANGELOG.md
+          git log --pretty=format:"- %s" --reverse >> CHANGELOG.md
+          echo "" >> CHANGELOG.md
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install backend dependencies
+        run: |
+          cd vowvenue_backend
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run backend tests
+        run: |
+          cd vowvenue_backend
+          python manage.py test
+
+      - name: Dependency vulnerability scan (backend)
+        run: |
+          pip install safety
+          safety check -r vowvenue_backend/requirements.txt --output-file safety-report.json
+        continue-on-error: true
+
+      - name: Upload backend security report
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-security-report
+          path: safety-report.json
+        if: always()
+
+      - name: Install frontend dependencies
+        run: |
+          cd vow-venue-frontend
+          npm ci
+
+      - name: Run frontend tests
+        run: |
+          cd vow-venue-frontend
+          npm test -- --watchAll=false
+
+      - name: Dependency vulnerability scan (frontend)
+        run: |
+          cd vow-venue-frontend
+          npm audit --audit-level=high --json > npm-audit.json
+        continue-on-error: true
+
+      - name: Upload frontend security report
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-security-report
+          path: vow-venue-frontend/npm-audit.json
+        if: always()
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Azure Container Registry
+        uses: azure/docker-login@v1
+        with:
+          login-server: ${{ env.ACR_LOGIN_SERVER }}
+          username: ${{ secrets.ACR_USERNAME }}
+          password: ${{ secrets.ACR_PASSWORD }}
+
+      - name: Build backend image
+        run: docker build -t ${{ env.ACR_LOGIN_SERVER }}/knot-backend:${{ env.VERSION }} ./vowvenue_backend
+
+      - name: Build frontend image
+        run: docker build -t ${{ env.ACR_LOGIN_SERVER }}/knot-frontend:${{ env.VERSION }} ./vow-venue-frontend
+
+      - name: Install Trivy
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y wget apt-transport-https gnupg lsb-release
+          wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | gpg --dearmor | sudo tee /usr/share/keyrings/trivy.gpg > /dev/null
+          echo "deb [signed-by=/usr/share/keyrings/trivy.gpg] https://aquasecurity.github.io/trivy-repo/deb $(lsb_release -sc) main" | sudo tee -a /etc/apt/sources.list.d/trivy.list
+          sudo apt-get update
+          sudo apt-get install -y trivy
+
+      - name: Scan backend image
+        run: |
+          docker save ${{ env.ACR_LOGIN_SERVER }}/knot-backend:${{ env.VERSION }} -o backend-image.tar
+          trivy image --input backend-image.tar \
+            --format sarif \
+            --severity CRITICAL,HIGH \
+            --ignore-unfixed \
+            --vuln-type os,library \
+            --output trivy-backend-results.sarif
+          rm backend-image.tar
+        continue-on-error: true
+
+      - name: Scan frontend image
+        run: |
+          docker save ${{ env.ACR_LOGIN_SERVER }}/knot-frontend:${{ env.VERSION }} -o frontend-image.tar
+          trivy image --input frontend-image.tar \
+            --format sarif \
+            --severity CRITICAL,HIGH \
+            --ignore-unfixed \
+            --vuln-type os,library \
+            --output trivy-frontend-results.sarif
+          rm frontend-image.tar
+        continue-on-error: true
+
+      - name: Upload security scan results
+        uses: actions/upload-artifact@v4
+        with:
+          name: trivy-scan-results
+          path: |
+            trivy-backend-results.sarif
+            trivy-frontend-results.sarif
+        if: always()
+
+      - name: Push backend image
+        run: |
+          docker push ${{ env.ACR_LOGIN_SERVER }}/knot-backend:${{ env.VERSION }}
+          docker tag ${{ env.ACR_LOGIN_SERVER }}/knot-backend:${{ env.VERSION }} ${{ env.ACR_LOGIN_SERVER }}/knot-backend:latest
+          docker push ${{ env.ACR_LOGIN_SERVER }}/knot-backend:latest
+
+      - name: Push frontend image
+        run: |
+          docker push ${{ env.ACR_LOGIN_SERVER }}/knot-frontend:${{ env.VERSION }}
+          docker tag ${{ env.ACR_LOGIN_SERVER }}/knot-frontend:${{ env.VERSION }} ${{ env.ACR_LOGIN_SERVER }}/knot-frontend:latest
+          docker push ${{ env.ACR_LOGIN_SERVER }}/knot-frontend:latest
+
+      - name: Create build status check
+        if: always()
+        uses: actions/github-script@v6
+        with:
+          script: |
+            github.rest.repos.createCommitStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              sha: context.sha,
+              state: job.status == 'success' ? 'success' : 'failure',
+              context: 'build-test-scan',
+              description: 'Build and test completed'
+            })
 
   deploy-production:
     needs: build-test-scan
@@ -63,6 +209,21 @@ jobs:
             --image ${{ env.ACR_LOGIN_SERVER }}/knot-frontend:${{ env.VERSION }} \
             --cpu 0.5 \
             --memory 1.0Gi
+
+      - name: Create deployment status check
+        if: always()
+        uses: actions/github-script@v6
+        with:
+          script: |
+            github.rest.repos.createCommitStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              sha: context.sha,
+              state: job.status == 'success' ? 'success' : 'failure',
+              context: 'deploy-production',
+              description: 'Deployment completed'
+            })
+
   post-deployment-verification:
     needs: deploy-production
     if: always()
@@ -70,12 +231,39 @@ jobs:
     steps:
       - name: Verify deployment
         run: |
-          echo "Deployment verification would go here"
-          # This creates a success status when the job completes
-        if: success()
+          echo "Checking backend..."
+          response=$(curl -s -o /dev/null -w "%{http_code}" https://knot-backend.ashysea-fcb2b410.eastus.azurecontainerapps.io/)
+          if [ "$response" -eq 200 ]; then
+            echo "Backend is up (Status: $response)"
+          else
+            echo "Backend check failed (Status: $response)"
+          fi
+
+          echo "Checking frontend..."
+          response=$(curl -s -o /dev/null -w "%{http_code}" https://knot-frontend.ashysea-fcb2b410.eastus.azurecontainerapps.io)
+          if [ "$response" -eq 200 ]; then
+            echo "Frontend is up (Status: $response)"
+          else
+            echo "Frontend check failed (Status: $response)"
+          fi
+        continue-on-error: true
 
       - name: Upload CHANGELOG
         uses: actions/upload-artifact@v4
         with:
           name: changelog
           path: CHANGELOG.md
+
+      - name: Create final status check
+        if: always()
+        uses: actions/github-script@v6
+        with:
+          script: |
+            github.rest.repos.createCommitStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              sha: context.sha,
+              state: job.status == 'success' ? 'success' : 'failure',
+              context: 'ci/cd',
+              description: 'Full pipeline completed'
+            })
