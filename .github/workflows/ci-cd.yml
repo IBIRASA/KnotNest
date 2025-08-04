@@ -1,4 +1,4 @@
-name: CI/CD Pipeline
+name: CI/CD
 
 on:
   push:
@@ -7,7 +7,7 @@ on:
     paths:
       - 'vow-venue-frontend/**'
       - 'vowvenue_backend/**'
-      - '.github/workflows/**'
+      - '.github/workflows/ci-cd.yml'
   pull_request:
     branches:
       - main
