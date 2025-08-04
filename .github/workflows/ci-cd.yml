@@ -101,10 +101,13 @@ jobs:
             vowvenue_backend/safety-report.json
             vow-venue-frontend/npm-audit.json
 
-      - name: Docker setup
+      - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
         with:
-          driver-opts: network=host
+          driver: docker-container
+          driver-opts: |
+            image=moby/buildkit:master
+          install: true
 
       - name: Login to ACR
         uses: azure/docker-login@v1
@@ -123,6 +126,9 @@ jobs:
             ${{ env.ACR_LOGIN_SERVER }}/${{ env.BACKEND_APP }}:latest
           cache-from: type=registry,ref=${{ env.ACR_LOGIN_SERVER }}/${{ env.BACKEND_APP }}:buildcache
           cache-to: type=registry,ref=${{ env.ACR_LOGIN_SERVER }}/${{ env.BACKEND_APP }}:buildcache,mode=max
+          build-args: |
+            BUILDKIT_INLINE_CACHE=1
+
       - name: Build and push frontend
         uses: docker/build-push-action@v5
         with:
@@ -133,6 +139,8 @@ jobs:
             ${{ env.ACR_LOGIN_SERVER }}/${{ env.FRONTEND_APP }}:latest
           cache-from: type=registry,ref=${{ env.ACR_LOGIN_SERVER }}/${{ env.FRONTEND_APP }}:buildcache
           cache-to: type=registry,ref=${{ env.ACR_LOGIN_SERVER }}/${{ env.FRONTEND_APP }}:buildcache,mode=max
+          build-args: |
+            BUILDKIT_INLINE_CACHE=1
 
   deploy-production:
     needs: build-test-scan
