@@ -26,13 +26,13 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Generate CHANGELOG
-        run: |
+    - name: Generate CHANGELOG
+       run: |
           echo "## $(date +'%Y-%m-%d') - Version ${VERSION:0:7}" >> CHANGELOG.md
-          git log --pretty=format:"- %s" HEAD^..HEAD >> CHANGELOG.md
+          git log --pretty=format:"- %s" --reverse >> CHANGELOG.md
           echo "" >> CHANGELOG.md
 
-      - name: Set up Python
+    - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.10'
