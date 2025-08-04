@@ -31,10 +31,8 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          path: 'src'
 
       - name: Generate CHANGELOG
-        working-directory: ./src
         run: |
           echo "## $(date +'%Y-%m-%d') - Version ${VERSION:0:7}" >> CHANGELOG.md
           echo "### Changes" >> CHANGELOG.md
@@ -45,7 +43,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: CHANGELOG
-          path: src/CHANGELOG.md
+          path: CHANGELOG.md
           retention-days: 1
 
       - name: Set up Python
@@ -55,17 +53,17 @@ jobs:
           cache: 'pip'
 
       - name: Install backend dependencies
-        working-directory: ./src/vowvenue_backend
+        working-directory: ./vowvenue_backend
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
       - name: Run backend tests
-        working-directory: ./src/vowvenue_backend
+        working-directory: ./vowvenue_backend
         run: python manage.py test
 
       - name: Backend security scan
-        working-directory: ./src/vowvenue_backend
+        working-directory: ./vowvenue_backend
         run: |
           pip install safety
           safety check -r requirements.txt --output-file safety-report.json
@@ -81,18 +79,17 @@ jobs:
       - name: Install frontend dependencies
         working-directory: ./vow-venue-frontend
         run: |
-          # Create lock file if missing
           if [ ! -f "package-lock.json" ]; then
             npm install --package-lock-only
           fi
           npm ci
 
       - name: Run frontend tests
-        working-directory: ./src/vow-venue-frontend
+        working-directory: ./vow-venue-frontend
         run: npm test -- --watchAll=false --ci
 
       - name: Frontend security scan
-        working-directory: ./src/vow-venue-frontend
+        working-directory: ./vow-venue-frontend
         run: npm audit --audit-level=high --json > npm-audit.json
         continue-on-error: true
 
@@ -101,8 +98,8 @@ jobs:
         with:
           name: security-reports
           path: |
-            src/vowvenue_backend/safety-report.json
-            src/vow-venue-frontend/npm-audit.json
+            vowvenue_backend/safety-report.json
+            vow-venue-frontend/npm-audit.json
 
       - name: Docker setup
         uses: docker/setup-buildx-action@v3
@@ -119,7 +116,7 @@ jobs:
       - name: Build and push backend
         uses: docker/build-push-action@v5
         with:
-          context: ./src/vowvenue_backend
+          context: ./vowvenue_backend
           push: true
           tags: |
             ${{ env.ACR_LOGIN_SERVER }}/${{ env.BACKEND_APP }}:${{ env.VERSION }}
@@ -130,7 +127,7 @@ jobs:
       - name: Build and push frontend
         uses: docker/build-push-action@v5
         with:
-          context: ./src/vow-venue-frontend
+          context: ./vow-venue-frontend
           push: true
           tags: |
             ${{ env.ACR_LOGIN_SERVER }}/${{ env.FRONTEND_APP }}:${{ env.VERSION }}
