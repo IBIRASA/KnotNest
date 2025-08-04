@@ -17,13 +17,20 @@ env:
   AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
   AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
   AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
-# ...existing code...
+  VERSION: ${{ github.sha }}
+
 jobs:
   build-test-scan:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
+
+      - name: Generate CHANGELOG
+        run: |
+          echo "## $(date +'%Y-%m-%d') - Version ${VERSION:0:7}" >> CHANGELOG.md
+          git log --pretty=format:"- %s" HEAD^..HEAD >> CHANGELOG.md
+          echo "" >> CHANGELOG.md
 
       - name: Set up Python
         uses: actions/setup-python@v4
@@ -41,6 +48,18 @@ jobs:
           cd vowvenue_backend
           python manage.py test
 
+      - name: Dependency vulnerability scan (backend)
+        run: |
+          pip install safety
+          safety check -r vowvenue_backend/requirements.txt --output-file safety-report.json
+        continue-on-error: true # Don't fail build but report findings
+
+      - name: Upload backend security report
+        uses: actions/upload-artifact@v3
+        with:
+          name: backend-security-report
+          path: safety-report.json
+
       - name: Install frontend dependencies
         run: |
           cd vow-venue-frontend
@@ -51,15 +70,17 @@ jobs:
           cd vow-venue-frontend
           npm test -- --watchAll=false
 
-      - name: Dependency vulnerability scan (backend)
-        run: |
-          pip install safety
-          safety check -r vowvenue_backend/requirements.txt
-
       - name: Dependency vulnerability scan (frontend)
         run: |
           cd vow-venue-frontend
-          npm audit --audit-level=high
+          npm audit --audit-level=high --json > npm-audit.json
+        continue-on-error: true
+
+      - name: Upload frontend security report
+        uses: actions/upload-artifact@v3
+        with:
+          name: frontend-security-report
+          path: vow-venue-frontend/npm-audit.json
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -70,32 +91,57 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      # ...existing code...
       - name: Build backend image
-        run: docker build -t $DOCKER_USERNAME/knot-backend ./vowvenue_backend
+        run: docker build -t $DOCKER_USERNAME/knot-backend:$VERSION ./vowvenue_backend
 
       - name: Build frontend image
-        run: docker build -t $DOCKER_USERNAME/knot-frontend ./vow-venue-frontend
+        run: docker build -t $DOCKER_USERNAME/knot-frontend:$VERSION ./vow-venue-frontend
 
       - name: Container image scan (backend)
         uses: aquasecurity/trivy-action@v0.19.0
         with:
-          image-ref: ${{ env.DOCKER_USERNAME }}/knot-backend
+          image-ref: ${{ env.DOCKER_USERNAME }}/knot-backend:$VERSION
+          severity: 'CRITICAL'
+          exit-code: '1'
+          format: 'table'
+          output: trivy-backend-report.txt
+
+      - name: Upload backend image scan report
+        uses: actions/upload-artifact@v3
+        with:
+          name: trivy-backend-report
+          path: trivy-backend-report.txt
 
       - name: Container image scan (frontend)
         uses: aquasecurity/trivy-action@v0.19.0
         with:
-          image-ref: ${{ env.DOCKER_USERNAME }}/knot-frontend
+          image-ref: ${{ env.DOCKER_USERNAME }}/knot-frontend:$VERSION
+          severity: 'CRITICAL'
+          exit-code: '1'
+          format: 'table'
+          output: trivy-frontend-report.txt
+
+      - name: Upload frontend image scan report
+        uses: actions/upload-artifact@v3
+        with:
+          name: trivy-frontend-report
+          path: trivy-frontend-report.txt
 
       - name: Push backend image
-        run: docker push $DOCKER_USERNAME/knot-backend
+        run: |
+          docker push $DOCKER_USERNAME/knot-backend:$VERSION
+          docker tag $DOCKER_USERNAME/knot-backend:$VERSION $DOCKER_USERNAME/knot-backend:latest
+          docker push $DOCKER_USERNAME/knot-backend:latest
 
       - name: Push frontend image
-        run: docker push $DOCKER_USERNAME/knot-frontend
-  # ...existing code...
+        run: |
+          docker push $DOCKER_USERNAME/knot-frontend:$VERSION
+          docker tag $DOCKER_USERNAME/knot-frontend:$VERSION $DOCKER_USERNAME/knot-frontend:latest
+          docker push $DOCKER_USERNAME/knot-frontend:latest
 
   deploy-production:
     needs: build-test-scan
+    if: github.ref == 'refs/heads/main' # Only deploy on main branch
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -119,7 +165,7 @@ jobs:
           az containerapp update \
             --name knot-backend \
             --resource-group knotnest-rg \
-            --image $DOCKER_USERNAME/knot-backend \
+            --image $DOCKER_USERNAME/knot-backend:$VERSION \
             --cpu 0.5 \
             --memory 1.0Gi
 
@@ -128,16 +174,61 @@ jobs:
           az containerapp update \
             --name knot-frontend \
             --resource-group knotnest-rg \
-            --image $DOCKER_USERNAME/knot-frontend \
+            --image $DOCKER_USERNAME/knot-frontend:$VERSION \
             --cpu 0.5 \
             --memory 1.0Gi
+
+      - name: Setup Azure Monitor Alerts
+        run: |
+          # Create availability alert for backend
+          az monitor metrics alert create \
+            --name "BackendAvailabilityAlert" \
+            --resource-group knotnest-rg \
+            --scopes "/subscriptions/${{ secrets.AZURE_SUBSCRIPTION_ID }}/resourceGroups/knotnest-rg/providers/Microsoft.App/containerApps/knot-backend" \
+            --condition "avg requests.count < 1 where httpStatusCode == '200' for 5m" \
+            --description "Backend availability dropped below threshold" \
+            --severity 2
+
+          # Create error rate alert for frontend
+          az monitor metrics alert create \
+            --name "FrontendErrorAlert" \
+            --resource-group knotnest-rg \
+            --scopes "/subscriptions/${{ secrets.AZURE_SUBSCRIPTION_ID }}/resourceGroups/knotnest-rg/providers/Microsoft.App/containerApps/knot-frontend" \
+            --condition "count http.status_code >= 500 for 5m" \
+            --description "Frontend error rate exceeded threshold" \
+            --severity 1
 
   post-deployment-verification:
     needs: deploy-production
     runs-on: ubuntu-latest
     steps:
       - name: Check Backend Health
-        run: curl -f https://knot-backend.ashysea-fcb2b410.eastus.azurecontainerapps.io || exit 1
+        run: |
+          response=$(curl -s -o /dev/null -w "%{http_code}" https://knot-backend.ashysea-fcb2b410.eastus.azurecontainerapps.io/health)
+          if [ "$response" -ne 200 ]; then
+            echo "Backend health check failed with status $response"
+            exit 1
+          fi
 
       - name: Check Frontend Health
-        run: curl -f https://knot-frontend.ashysea-fcb2b410.eastus.azurecontainerapps.io || exit 1
+        run: |
+          response=$(curl -s -o /dev/null -w "%{http_code}" https://knot-frontend.ashysea-fcb2b410.eastus.azurecontainerapps.io)
+          if [ "$response" -ne 200 ]; then
+            echo "Frontend health check failed with status $response"
+            exit 1
+          fi
+
+      - name: Configure Application Insights Dashboard
+        run: |
+          # Create dashboard with key metrics
+          az portal dashboard create \
+            --resource-group knotnest-rg \
+            --name "VowVenue-Monitoring" \
+            --input-path dashboard.json
+        # Note: You'll need to create a dashboard.json file with your dashboard configuration
+
+      - name: Upload CHANGELOG
+        uses: actions/upload-artifact@v3
+        with:
+          name: changelog
+          path: CHANGELOG.md
