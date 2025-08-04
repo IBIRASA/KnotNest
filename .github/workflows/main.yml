@@ -11,8 +11,9 @@ env:
   DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
   AZURE_CREDENTIALS: ${{ secrets.AZURE_CREDENTIALS }}
   ACR_LOGIN_SERVER: ${{ secrets.ACR_LOGIN_SERVER }}
-  ACR_USERNAME: ${{ secrets.AZURE_CLIENT_ID }}
-  ACR_PASSWORD: ${{ secrets.AZURE_CLIENT_SECRET }}
+  ACR_USERNAME: ${{ secrets.ACR_USERNAME }}
+  ACR_PASSWORD: ${{ secrets.ACR_PASSWORD }}
+
 
 jobs:
   build-and-test:
