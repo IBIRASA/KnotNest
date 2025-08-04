@@ -1,130 +1,95 @@
-name: CD Pipeline
+name: CI/CD Pipeline
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
+      - develop
   pull_request:
-    branches: [main]
+    branches:
+      - main
 
 env:
-  IMAGE_NAME_BACKEND: knotnest_backend
-  IMAGE_NAME_FRONTEND: knotnest_frontend
+  DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+  DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+  ACR_LOGIN_SERVER: ${{ secrets.ACR_LOGIN_SERVER }}
+  AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+  AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+  AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+  AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
 
 jobs:
   build-and-push-images:
     runs-on: ubuntu-latest
-    outputs:
-      version: ${{ steps.version.outputs.version }}
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v3
 
-      - name: Set up Python
-        uses: actions/setup-python@v4
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
         with:
-          python-version: '3.10'
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: Install Backend Dependencies
-        working-directory: vowvenue_backend
-        run: pip install -r requirements.txt
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
-      - name: Install Frontend Dependencies
-        working-directory: vow-venue-frontend
-        run: npm ci
-
-      - name: Generate Version Tag
-        id: version
+      - name: Build and push backend image
         run: |
-          VERSION=$(date +%Y%m%d)-${GITHUB_SHA::7}
-          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          docker build -t $DOCKER_USERNAME/knot-backend ./backend
+          docker push $DOCKER_USERNAME/knot-backend
 
-      - name: Docker Hub Login
+      - name: Build and push frontend image
         run: |
-          echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin || exit 1
-
-      - name: Azure Container Registry Login
-        run: |
-          echo "${{ secrets.ACR_PASSWORD }}" | docker login "${{ secrets.ACR_LOGIN_SERVER }}" -u "${{ secrets.ACR_USERNAME }}" --password-stdin || exit 1
-
-      - name: Build and Push Backend Image to Docker Hub and ACR
-        run: |
-          docker build -t ${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME_BACKEND }}:${{ steps.version.outputs.version }} ./vowvenue_backend
-          docker push ${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME_BACKEND }}:${{ steps.version.outputs.version }}
-          docker tag ${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME_BACKEND }}:${{ steps.version.outputs.version }} ${{ secrets.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME_BACKEND }}:${{ steps.version.outputs.version }}
-          docker push ${{ secrets.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME_BACKEND }}:${{ steps.version.outputs.version }}
-
-      - name: Build and Push Frontend Image to Docker Hub and ACR
-        run: |
-          docker build -t ${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME_FRONTEND }}:${{ steps.version.outputs.version }} ./vow-venue-frontend
-          docker push ${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME_FRONTEND }}:${{ steps.version.outputs.version }}
-          docker tag ${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME_FRONTEND }}:${{ steps.version.outputs.version }} ${{ secrets.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME_FRONTEND }}:${{ steps.version.outputs.version }}
-          docker push ${{ secrets.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME_FRONTEND }}:${{ steps.version.outputs.version }}
-
-      - name: Docker Logout
-        if: always()
-        run: docker logout
+          docker build -t $DOCKER_USERNAME/knot-frontend ./frontend
+          docker push $DOCKER_USERNAME/knot-frontend
 
   deploy-production:
-    runs-on: ubuntu-latest
     needs: build-and-push-images
-    environment: production
+    runs-on: ubuntu-latest
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v3
 
-      - name: Azure Login
-        uses: azure/login@v1
+      - name: Set up Azure CLI
+        uses: azure/setup-azure-cli@v2
         with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
+          azure-cli-version: 'latest'
+
+      - name: Azure Login using Service Principal
+        run: |
+          az login --service-principal -u ${{ secrets.AZURE_CLIENT_ID }} -p ${{ secrets.AZURE_CLIENT_SECRET }} --tenant ${{ secrets.AZURE_TENANT_ID }}
+
+      - name: Set Azure Subscription
+        run: |
+          az account set --subscription ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
       - name: Deploy Backend to Azure Container App
         run: |
           az containerapp update \
             --name knot-backend \
             --resource-group knotnest-rg \
-            --image ${{ secrets.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME_BACKEND }}:${{ needs.build-and-push-images.outputs.version }}
+            --image $DOCKER_USERNAME/knot-backend \
+            --cpu 0.5 \
+            --memory 1.0Gi
 
       - name: Deploy Frontend to Azure Container App
         run: |
           az containerapp update \
             --name knot-frontend \
             --resource-group knotnest-rg \
-            --image ${{ secrets.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME_FRONTEND }}:${{ needs.build-and-push-images.outputs.version }}
-
-      - name: Create Git Tag
-        run: |
-          git config --local user.email "action@github.com"
-          git config --local user.name "GitHub Action"
-          git tag -a v${{ needs.build-and-push-images.outputs.version }} -m "Release version ${{ needs.build-and-push-images.outputs.version }}"
-          git push origin v${{ needs.build-and-push-images.outputs.version }}
-
-      - name: Update CHANGELOG
-        run: |
-          echo "## [v${{ needs.build-and-push-images.outputs.version }}] - $(date +%Y-%m-%d)" > temp_changelog.md
-          echo "### Deployed" >> temp_changelog.md
-          echo "- Deployed backend and frontend to Azure Container Apps" >> temp_changelog.md
-          echo "- Version: ${{ needs.build-and-push-images.outputs.version }}" >> temp_changelog.md
-          cat CHANGELOG.md >> temp_changelog.md
-          mv temp_changelog.md CHANGELOG.md
-          git add CHANGELOG.md
-          git commit -m "chore: update changelog for v${{ needs.build-and-push-images.outputs.version }}" || echo "No changes to commit"
-          git push origin main || true
+            --image $DOCKER_USERNAME/knot-frontend \
+            --cpu 0.5 \
+            --memory 1.0Gi
 
   post-deployment-verification:
-    runs-on: ubuntu-latest
     needs: deploy-production
-    if: always() && needs.deploy-production.result == 'success'
+    runs-on: ubuntu-latest
     steps:
-      - name: Health Check Production
+      - name: Check Backend Health
         run: |
-          chmod +x scripts/health-check.sh
-          ./scripts/health-check.sh \
-            --frontend-url "https://knot-frontend.ashysea-fcb2b410.eastus.azurecontainerapps.io" \
-            --backend-url "https://knot-backend.ashysea-fcb2b410.eastus.azurecontainerapps.io" \
-            --max-retries 20 \
-            --retry-interval 15
+          curl -f https://knot-backend.ashysea-fcb2b410.eastus.azurecontainerapps.io || exit 1
+
+      - name: Check Frontend Health
+        run: |
+          curl -f https://knot-frontend.ashysea-fcb2b410.eastus.azurecontainerapps.io || exit 1
