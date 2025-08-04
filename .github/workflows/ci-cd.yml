@@ -66,7 +66,7 @@ jobs:
         working-directory: ./vowvenue_backend
         run: |
           pip install safety
-          safety check -r requirements.txt --output-file safety-report.json
+          safety check -r requirements.txt --output-file safety-report.json || true
         continue-on-error: true
 
       - name: Set up Node.js
@@ -90,7 +90,7 @@ jobs:
 
       - name: Frontend security scan
         working-directory: ./vow-venue-frontend
-        run: npm audit --audit-level=high --json > npm-audit.json
+        run: npm audit --audit-level=high --json > npm-audit.json || true
         continue-on-error: true
 
       - name: Upload security reports
@@ -100,6 +100,7 @@ jobs:
           path: |
             vowvenue_backend/safety-report.json
             vow-venue-frontend/npm-audit.json
+          retention-days: 1
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
@@ -193,11 +194,24 @@ jobs:
     if: always()
     runs-on: ubuntu-latest
     steps:
-      - name: Download artifacts
+      - name: Download CHANGELOG
         uses: actions/download-artifact@v4
         with:
           name: CHANGELOG
           path: ./artifacts
+
+      - name: Download security reports
+        uses: actions/download-artifact@v4
+        with:
+          name: security-reports
+          path: ./artifacts
+
+      - name: Verify files exist
+        run: |
+          ls -la ./artifacts
+          [ -f "./artifacts/CHANGELOG.md" ] || echo "::warning::CHANGELOG.md not found!"
+          [ -f "./artifacts/safety-report.json" ] || echo "::warning::safety-report.json not found!"
+          [ -f "./artifacts/npm-audit.json" ] || echo "::warning::npm-audit.json not found!"
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
@@ -210,3 +224,5 @@ jobs:
           files: |
             ./artifacts/safety-report.json
             ./artifacts/npm-audit.json
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
