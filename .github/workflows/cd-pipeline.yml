@@ -17,13 +17,49 @@ env:
   AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
   AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
   AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
-
+# ...existing code...
 jobs:
-  build-and-push-images:
+  build-test-scan:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install backend dependencies
+        run: |
+          cd vowvenue_backend
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run backend tests
+        run: |
+          cd vowvenue_backend
+          python manage.py test
+
+      - name: Install frontend dependencies
+        run: |
+          cd vow-venue-frontend
+          npm ci
+
+      - name: Run frontend tests
+        run: |
+          cd vow-venue-frontend
+          npm test -- --watchAll=false
+
+      - name: Dependency vulnerability scan (backend)
+        run: |
+          pip install safety
+          safety check -r vowvenue_backend/requirements.txt
+
+      - name: Dependency vulnerability scan (frontend)
+        run: |
+          cd vow-venue-frontend
+          npm audit --audit-level=high
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -34,18 +70,30 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: Build and push backend image
-        run: |
-          docker build -t $DOCKER_USERNAME/knot-backend ./backend
-          docker push $DOCKER_USERNAME/knot-backend
+      - name: Build backend image
+        run: docker build -t $DOCKER_USERNAME/knot-backend ./vowvenue_backend
 
-      - name: Build and push frontend image
-        run: |
-          docker build -t $DOCKER_USERNAME/knot-frontend ./frontend
-          docker push $DOCKER_USERNAME/knot-frontend
+      - name: Build frontend image
+        run: docker build -t $DOCKER_USERNAME/knot-frontend ./vow-venue-frontend
+
+      - name: Container image scan (backend)
+        uses: aquasecurity/trivy-action@v0.16.0
+        with:
+          image-ref: ${{ env.DOCKER_USERNAME }}/knot-backend
+
+      - name: Container image scan (frontend)
+        uses: aquasecurity/trivy-action@v0.16.0
+        with:
+          image-ref: ${{ env.DOCKER_USERNAME }}/knot-frontend
+
+      - name: Push backend image
+        run: docker push $DOCKER_USERNAME/knot-backend
+
+      - name: Push frontend image
+        run: docker push $DOCKER_USERNAME/knot-frontend
 
   deploy-production:
-    needs: build-and-push-images
+    needs: build-test-scan
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -53,8 +101,6 @@ jobs:
 
       - name: Set up Azure CLI
         uses: azure/setup-azure-cli@v2
-        with:
-          version: latest
 
       - name: Azure Login using Service Principal
         run: |
@@ -64,8 +110,7 @@ jobs:
             --tenant ${{ secrets.AZURE_TENANT_ID }}
 
       - name: Set Azure Subscription
-        run: |
-          az account set --subscription ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+        run: az account set --subscription ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
       - name: Deploy Backend to Azure Container App
         run: |
@@ -90,9 +135,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check Backend Health
-        run: |
-          curl -f https://knot-backend.ashysea-fcb2b410.eastus.azurecontainerapps.io || exit 1
+        run: curl -f https://knot-backend.ashysea-fcb2b410.eastus.azurecontainerapps.io || exit 1
 
       - name: Check Frontend Health
-        run: |
-          curl -f https://knot-frontend.ashysea-fcb2b410.eastus.azurecontainerapps.io || exit 1
+        run: curl -f https://knot-frontend.ashysea-fcb2b410.eastus.azurecontainerapps.io || exit 1
