@@ -214,6 +214,7 @@ jobs:
 
   post-deployment-verification:
     needs: deploy-production
+    if: always() # This ensures it runs even if deployment fails
     runs-on: ubuntu-latest
     steps:
       - name: Check Backend Health
