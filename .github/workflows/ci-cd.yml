@@ -22,7 +22,7 @@ env:
   FRONTEND_APP: knot-frontend
   BACKEND_APP: knot-backend
 
-permisions:
+permissions:
   contents: write
 
 jobs:
