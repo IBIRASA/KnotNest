@@ -76,17 +76,17 @@ jobs:
       - name: Build frontend image
         run: docker build -t $DOCKER_USERNAME/knot-frontend ./vow-venue-frontend
 
+      # ...existing code...
       - name: Container image scan (backend)
-        uses: aquasecurity/trivy-action@v0.16.0
+        uses: aquasecurity/trivy-action@v0.19.0
         with:
           image-ref: ${{ env.DOCKER_USERNAME }}/knot-backend
 
       - name: Container image scan (frontend)
-        uses: aquasecurity/trivy-action@v0.16.0
+        uses: aquasecurity/trivy-action@v0.19.0
         with:
           image-ref: ${{ env.DOCKER_USERNAME }}/knot-frontend
-
-      - name: Push backend image
+        # ...exi
         run: docker push $DOCKER_USERNAME/knot-backend
 
       - name: Push frontend image
