@@ -31,7 +31,6 @@ const EventList = () => {
 
   const handleEdit = (id) => {
     console.log('Edit event with ID:', id);
-   
   };
 
   const handleDelete = (id) => {
