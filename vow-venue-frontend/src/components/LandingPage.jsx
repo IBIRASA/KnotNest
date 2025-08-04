@@ -33,14 +33,14 @@ function LandingPage() {
           dresses and catering, we've got everything covered to make your
           journey to “I do” smooth and memorable.
         </p>
-       <Button
-  variant="success"
-  size="lg"
-  onClick={() => navigate('/eventlist')}
-  className="px-5 py-3 rounded"
->
-  View Venues
-</Button>
+        <Button
+          variant="success"
+          size="lg"
+          onClick={() => navigate('/eventlist')}
+          className="px-5 py-3 rounded"
+        >
+          View
+        </Button>
       </div>
     </div>
   );
