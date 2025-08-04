@@ -189,24 +189,55 @@ jobs:
           echo "Generated version: $VERSION"
 
       - name: Log in to Docker Hub
-        run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+        run: |
+          if [ -n "${{ secrets.DOCKER_USERNAME }}" ] && [ -n "${{ secrets.DOCKER_PASSWORD }}" ]; then
+            echo "Logging in to Docker Hub..."
+            echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+          else
+            echo "Docker Hub credentials not found, skipping Docker Hub login"
+          fi
 
       - name: Log in to Azure Container Registry
-        run: echo "${{ secrets.ACR_PASSWORD }}" | docker login ${{ secrets.ACR_LOGIN_SERVER }} -u ${{ secrets.ACR_USERNAME }} --password-stdin
+        run: |
+          if [ -n "${{ secrets.ACR_LOGIN_SERVER }}" ] && [ -n "${{ secrets.ACR_USERNAME }}" ] && [ -n "${{ secrets.ACR_PASSWORD }}" ]; then
+            echo "Logging in to Azure Container Registry..."
+            echo "${{ secrets.ACR_PASSWORD }}" | docker login ${{ secrets.ACR_LOGIN_SERVER }} -u ${{ secrets.ACR_USERNAME }} --password-stdin
+          else
+            echo "Azure Container Registry credentials not found, skipping ACR login"
+            echo "Note: Images will only be pushed to Docker Hub"
+          fi
 
       - name: Build Docker Images
         run: |
-          # Build Frontend
-          docker build -t ${{ secrets.DOCKER_USERNAME }}/vowvenue-frontend:${{ steps.version.outputs.version }} ./vow-venue-frontend
-          docker build -t ${{ secrets.DOCKER_USERNAME }}/vowvenue-frontend:latest ./vow-venue-frontend
-          docker build -t ${{ secrets.ACR_LOGIN_SERVER }}/knotnest_frontend:${{ steps.version.outputs.version }} ./vow-venue-frontend
-          docker build -t ${{ secrets.ACR_LOGIN_SERVER }}/knotnest_frontend:latest ./vow-venue-frontend
+          echo "Building Docker images..."
           
-          # Build Backend
-          docker build -t ${{ secrets.DOCKER_USERNAME }}/vowvenue-backend:${{ steps.version.outputs.version }} ./vowvenue_backend
-          docker build -t ${{ secrets.DOCKER_USERNAME }}/vowvenue-backend:latest ./vowvenue_backend
-          docker build -t ${{ secrets.ACR_LOGIN_SERVER }}/knotnest_backend:${{ steps.version.outputs.version }} ./vowvenue_backend
-          docker build -t ${{ secrets.ACR_LOGIN_SERVER }}/knotnest_backend:latest ./vowvenue_backend
+          # Build Frontend for Docker Hub
+          if [ -n "${{ secrets.DOCKER_USERNAME }}" ]; then
+            echo "Building frontend images for Docker Hub..."
+            docker build -t ${{ secrets.DOCKER_USERNAME }}/vowvenue-frontend:${{ steps.version.outputs.version }} ./vow-venue-frontend
+            docker build -t ${{ secrets.DOCKER_USERNAME }}/vowvenue-frontend:latest ./vow-venue-frontend
+          fi
+          
+          # Build Frontend for ACR (if credentials available)
+          if [ -n "${{ secrets.ACR_LOGIN_SERVER }}" ]; then
+            echo "Building frontend images for Azure Container Registry..."
+            docker build -t ${{ secrets.ACR_LOGIN_SERVER }}/knotnest_frontend:${{ steps.version.outputs.version }} ./vow-venue-frontend
+            docker build -t ${{ secrets.ACR_LOGIN_SERVER }}/knotnest_frontend:latest ./vow-venue-frontend
+          fi
+          
+          # Build Backend for Docker Hub
+          if [ -n "${{ secrets.DOCKER_USERNAME }}" ]; then
+            echo "Building backend images for Docker Hub..."
+            docker build -t ${{ secrets.DOCKER_USERNAME }}/vowvenue-backend:${{ steps.version.outputs.version }} ./vowvenue_backend
+            docker build -t ${{ secrets.DOCKER_USERNAME }}/vowvenue-backend:latest ./vowvenue_backend
+          fi
+          
+          # Build Backend for ACR (if credentials available)
+          if [ -n "${{ secrets.ACR_LOGIN_SERVER }}" ]; then
+            echo "Building backend images for Azure Container Registry..."
+            docker build -t ${{ secrets.ACR_LOGIN_SERVER }}/knotnest_backend:${{ steps.version.outputs.version }} ./vowvenue_backend
+            docker build -t ${{ secrets.ACR_LOGIN_SERVER }}/knotnest_backend:latest ./vowvenue_backend
+          fi
 
       - name: Install Trivy
         run: |
@@ -219,13 +250,21 @@ jobs:
 
       - name: Container Security Scan
         run: |
-          # Scan frontend image
-          trivy image --severity HIGH,CRITICAL --format json -o frontend-trivy-report.json ${{ secrets.DOCKER_USERNAME }}/vowvenue-frontend:${{ steps.version.outputs.version }} || true
-          trivy image --severity HIGH,CRITICAL ${{ secrets.DOCKER_USERNAME }}/vowvenue-frontend:${{ steps.version.outputs.version }}
+          echo "Running container security scans..."
           
-          # Scan backend image
-          trivy image --severity HIGH,CRITICAL --format json -o backend-trivy-report.json ${{ secrets.DOCKER_USERNAME }}/vowvenue-backend:${{ steps.version.outputs.version }} || true
-          trivy image --severity HIGH,CRITICAL ${{ secrets.DOCKER_USERNAME }}/vowvenue-backend:${{ steps.version.outputs.version }}
+          # Scan frontend image (if built)
+          if [ -n "${{ secrets.DOCKER_USERNAME }}" ]; then
+            echo "Scanning frontend image..."
+            trivy image --severity HIGH,CRITICAL --format json -o frontend-trivy-report.json ${{ secrets.DOCKER_USERNAME }}/vowvenue-frontend:${{ steps.version.outputs.version }} || true
+            trivy image --severity HIGH,CRITICAL ${{ secrets.DOCKER_USERNAME }}/vowvenue-frontend:${{ steps.version.outputs.version }} || echo "Frontend scan completed"
+          fi
+          
+          # Scan backend image (if built)
+          if [ -n "${{ secrets.DOCKER_USERNAME }}" ]; then
+            echo "Scanning backend image..."
+            trivy image --severity HIGH,CRITICAL --format json -o backend-trivy-report.json ${{ secrets.DOCKER_USERNAME }}/vowvenue-backend:${{ steps.version.outputs.version }} || true
+            trivy image --severity HIGH,CRITICAL ${{ secrets.DOCKER_USERNAME }}/vowvenue-backend:${{ steps.version.outputs.version }} || echo "Backend scan completed"
+          fi
 
       - name: Upload Container Security Reports
         uses: actions/upload-artifact@v4
@@ -237,23 +276,37 @@ jobs:
 
       - name: Push Images to Registries
         run: |
-          # Push to Docker Hub
-          docker push ${{ secrets.DOCKER_USERNAME }}/vowvenue-frontend:${{ steps.version.outputs.version }}
-          docker push ${{ secrets.DOCKER_USERNAME }}/vowvenue-frontend:latest
-          docker push ${{ secrets.DOCKER_USERNAME }}/vowvenue-backend:${{ steps.version.outputs.version }}
-          docker push ${{ secrets.DOCKER_USERNAME }}/vowvenue-backend:latest
+          echo "Pushing Docker images to available registries..."
           
-          # Push to Azure Container Registry
-          docker push ${{ secrets.ACR_LOGIN_SERVER }}/knotnest_frontend:${{ steps.version.outputs.version }}
-          docker push ${{ secrets.ACR_LOGIN_SERVER }}/knotnest_frontend:latest
-          docker push ${{ secrets.ACR_LOGIN_SERVER }}/knotnest_backend:${{ steps.version.outputs.version }}
-          docker push ${{ secrets.ACR_LOGIN_SERVER }}/knotnest_backend:latest
+          # Push to Docker Hub (if credentials available)
+          if [ -n "${{ secrets.DOCKER_USERNAME }}" ] && [ -n "${{ secrets.DOCKER_PASSWORD }}" ]; then
+            echo "Pushing to Docker Hub..."
+            docker push ${{ secrets.DOCKER_USERNAME }}/vowvenue-frontend:${{ steps.version.outputs.version }}
+            docker push ${{ secrets.DOCKER_USERNAME }}/vowvenue-frontend:latest
+            docker push ${{ secrets.DOCKER_USERNAME }}/vowvenue-backend:${{ steps.version.outputs.version }}
+            docker push ${{ secrets.DOCKER_USERNAME }}/vowvenue-backend:latest
+            echo "Successfully pushed to Docker Hub"
+          else
+            echo "Skipping Docker Hub push - credentials not available"
+          fi
+          
+          # Push to Azure Container Registry (if credentials available)
+          if [ -n "${{ secrets.ACR_LOGIN_SERVER }}" ] && [ -n "${{ secrets.ACR_USERNAME }}" ] && [ -n "${{ secrets.ACR_PASSWORD }}" ]; then
+            echo "Pushing to Azure Container Registry..."
+            docker push ${{ secrets.ACR_LOGIN_SERVER }}/knotnest_frontend:${{ steps.version.outputs.version }}
+            docker push ${{ secrets.ACR_LOGIN_SERVER }}/knotnest_frontend:latest
+            docker push ${{ secrets.ACR_LOGIN_SERVER }}/knotnest_backend:${{ steps.version.outputs.version }}
+            docker push ${{ secrets.ACR_LOGIN_SERVER }}/knotnest_backend:latest
+            echo "Successfully pushed to Azure Container Registry"
+          else
+            echo "Skipping Azure Container Registry push - credentials not available"
+          fi
 
   # Deploy to Staging
   deploy-staging:
     runs-on: ubuntu-latest
     needs: build-images
-    if: github.ref == 'refs/heads/develop'
+    if: github.ref == 'refs/heads/develop' && vars.ACR_LOGIN_SERVER != ''
     environment: staging
     
     steps:
@@ -306,7 +359,7 @@ jobs:
   deploy-production:
     runs-on: ubuntu-latest
     needs: build-images
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main' && vars.ACR_LOGIN_SERVER != ''
     environment: production
     
     steps:
