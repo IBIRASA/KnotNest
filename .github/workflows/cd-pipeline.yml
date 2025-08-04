@@ -4,168 +4,185 @@ on:
   push:
     branches:
       - main
-      - develop
+    paths:
+      - 'vow-venue-frontend/**'
+      - 'vowvenue_backend/**'
+      - '.github/workflows/**'
   pull_request:
     branches:
       - main
 
 env:
-  DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
-  DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
   ACR_LOGIN_SERVER: ${{ secrets.ACR_LOGIN_SERVER }}
   AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
   AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
   AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-  AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+  AZURE_TENANT_ID: ad5c80fb-4e68-4158-90c5-60e23c034e76
   VERSION: ${{ github.sha }}
   RESOURCE_GROUP: knotnest-rg
+  FRONTEND_APP: knot-frontend
+  BACKEND_APP: knot-backend
 
 jobs:
   build-test-scan:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Required for full git history in CHANGELOG
 
       - name: Generate CHANGELOG
         run: |
           echo "## $(date +'%Y-%m-%d') - Version ${VERSION:0:7}" >> CHANGELOG.md
-          git log --pretty=format:"- %s" --reverse >> CHANGELOG.md
+          echo "### Changes" >> CHANGELOG.md
+          git log --pretty=format:"- %s (%h)" --reverse HEAD^..HEAD >> CHANGELOG.md
           echo "" >> CHANGELOG.md
+          cat CHANGELOG.md
 
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.10'
+          cache: 'pip'
 
       - name: Install backend dependencies
+        working-directory: ./vowvenue_backend
         run: |
-          cd vowvenue_backend
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
       - name: Run backend tests
-        run: |
-          cd vowvenue_backend
-          python manage.py test
+        working-directory: ./vowvenue_backend
+        run: python manage.py test
 
-      - name: Dependency vulnerability scan (backend)
+      - name: Backend security scan
+        working-directory: ./vowvenue_backend
         run: |
           pip install safety
-          safety check -r vowvenue_backend/requirements.txt --output-file safety-report.json
+          safety check -r requirements.txt --output-file safety-report.json
         continue-on-error: true
 
-      - name: Upload backend security report
-        uses: actions/upload-artifact@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
         with:
-          name: backend-security-report
-          path: safety-report.json
-        if: always()
+          node-version: '18'
+          cache: 'npm'
 
       - name: Install frontend dependencies
-        run: |
-          cd vow-venue-frontend
-          npm ci
+        working-directory: ./vow-venue-frontend
+        run: npm ci
 
       - name: Run frontend tests
-        run: |
-          cd vow-venue-frontend
-          npm test -- --watchAll=false
+        working-directory: ./vow-venue-frontend
+        run: npm test -- --watchAll=false --ci
 
-      - name: Dependency vulnerability scan (frontend)
-        run: |
-          cd vow-venue-frontend
-          npm audit --audit-level=high --json > npm-audit.json
+      - name: Frontend security scan
+        working-directory: ./vow-venue-frontend
+        run: npm audit --audit-level=high --json > npm-audit.json
         continue-on-error: true
 
-      - name: Upload frontend security report
+      - name: Upload security reports
         uses: actions/upload-artifact@v4
         with:
-          name: frontend-security-report
-          path: vow-venue-frontend/npm-audit.json
-        if: always()
+          name: security-reports
+          path: |
+            vowvenue_backend/safety-report.json
+            vow-venue-frontend/npm-audit.json
 
-      - name: Set up Docker Buildx
+      - name: Docker setup
         uses: docker/setup-buildx-action@v3
+        with:
+          driver-opts: network=host
 
-      - name: Login to Azure Container Registry
+      - name: Login to ACR
         uses: azure/docker-login@v1
         with:
           login-server: ${{ env.ACR_LOGIN_SERVER }}
           username: ${{ secrets.ACR_USERNAME }}
           password: ${{ secrets.ACR_PASSWORD }}
 
-      - name: Build backend image
-        run: docker build -t ${{ env.ACR_LOGIN_SERVER }}/knot-backend:${{ env.VERSION }} ./vowvenue_backend
+      - name: Build and push backend
+        uses: docker/build-push-action@v5
+        with:
+          context: ./vowvenue_backend
+          push: true
+          tags: |
+            ${{ env.ACR_LOGIN_SERVER }}/${{ env.BACKEND_APP }}:${{ env.VERSION }}
+            ${{ env.ACR_LOGIN_SERVER }}/${{ env.BACKEND_APP }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
-      - name: Build frontend image
-        run: docker build -t ${{ env.ACR_LOGIN_SERVER }}/knot-frontend:${{ env.VERSION }} ./vow-venue-frontend
-
-      - name: Push backend image
-        run: |
-          docker push ${{ env.ACR_LOGIN_SERVER }}/knot-backend:${{ env.VERSION }}
-          docker tag ${{ env.ACR_LOGIN_SERVER }}/knot-backend:${{ env.VERSION }} ${{ env.ACR_LOGIN_SERVER }}/knot-backend:latest
-          docker push ${{ env.ACR_LOGIN_SERVER }}/knot-backend:latest
-
-      - name: Push frontend image
-        run: |
-          docker push ${{ env.ACR_LOGIN_SERVER }}/knot-frontend:${{ env.VERSION }}
-          docker tag ${{ env.ACR_LOGIN_SERVER }}/knot-frontend:${{ env.VERSION }} ${{ env.ACR_LOGIN_SERVER }}/knot-frontend:latest
-          docker push ${{ env.ACR_LOGIN_SERVER }}/knot-frontend:latest
+      - name: Build and push frontend
+        uses: docker/build-push-action@v5
+        with:
+          context: ./vow-venue-frontend
+          push: true
+          tags: |
+            ${{ env.ACR_LOGIN_SERVER }}/${{ env.FRONTEND_APP }}:${{ env.VERSION }}
+            ${{ env.ACR_LOGIN_SERVER }}/${{ env.FRONTEND_APP }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
   deploy-production:
     needs: build-test-scan
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install Azure CLI
-        run: |
-          curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
-          az --version
-
       - name: Azure Login
-        run: |
-          echo "Attempting login with Tenant ID: ad5c80fb-4e68-4158-90c5-60e23c034e76"
-          az login --service-principal \
-            -u "${{ secrets.AZURE_CLIENT_ID }}" \
-            -p "${{ secrets.AZURE_CLIENT_SECRET }}" \
-            --tenant "ad5c80fb-4e68-4158-90c5-60e23c034e76" \
-            --allow-no-subscriptions
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-          echo "Setting active subscription: ${{ secrets.AZURE_SUBSCRIPTION_ID }}"
-          az account set --subscription "${{ secrets.AZURE_SUBSCRIPTION_ID }}"
-
-          echo "Verifying login..."
-          az account show
-
-      - name: Deploy Backend to Azure Container App
+      - name: Deploy backend
         run: |
           az containerapp update \
-            --name knot-backend \
+            --name ${{ env.BACKEND_APP }} \
             --resource-group ${{ env.RESOURCE_GROUP }} \
-            --image ${{ env.ACR_LOGIN_SERVER }}/knot-backend:${{ env.VERSION }} \
+            --image ${{ env.ACR_LOGIN_SERVER }}/${{ env.BACKEND_APP }}:${{ env.VERSION }} \
             --cpu 0.5 \
-            --memory 1.0Gi
+            --memory 1.0Gi \
+            --query "{name:name, image:properties.template.containers[0].image, state:properties.provisioningState}"
 
-      - name: Deploy Frontend to Azure Container App
+      - name: Deploy frontend
         run: |
           az containerapp update \
-            --name knot-frontend \
+            --name ${{ env.FRONTEND_APP }} \
             --resource-group ${{ env.RESOURCE_GROUP }} \
-            --image ${{ env.ACR_LOGIN_SERVER }}/knot-frontend:${{ env.VERSION }} \
+            --image ${{ env.ACR_LOGIN_SERVER }}/${{ env.FRONTEND_APP }}:${{ env.VERSION }} \
             --cpu 0.5 \
-            --memory 1.0Gi
+            --memory 1.0Gi \
+            --query "{name:name, image:properties.template.containers[0].image, state:properties.provisioningState}"
 
-  post-deployment-verification:
+      - name: Verify deployments
+        run: |
+          az containerapp revision list \
+            --name ${{ env.FRONTEND_APP }} \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --query "[].{revision:name, image:properties.template.containers[0].image, active:properties.active, createdTime:properties.createdTime}" \
+            --output table
+
+  post-deployment:
     needs: deploy-production
     if: always()
     runs-on: ubuntu-latest
     steps:
-      - name: Upload CHANGELOG
-        uses: actions/upload-artifact@v4
+      - name: Download CHANGELOG
+        uses: actions/download-artifact@v4
         with:
-          name: changelog
-          path: CHANGELOG.md
+          name: CHANGELOG
+          path: ./artifacts
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: v${VERSION:0:7}
+          name: Release ${VERSION:0:7}
+          body_path: ./artifacts/CHANGELOG.md
+          draft: false
+          prerelease: false
