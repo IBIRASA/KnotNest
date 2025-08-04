@@ -6,33 +6,18 @@
     "jest": true
   },
   "extends": [
-    "react-app",
-    "plugin:jsx-a11y/recommended",
-    "prettier"  // Add Prettier to ensure no conflict with formatting
+    
+"eslint:recommended",
+    "plugin:react/recommended",
+    "prettier"
   ],
   "parserOptions": {
     "ecmaVersion": "latest",
     "sourceType": "module"
   },
-  "plugins": [
-    "react",
-    "prettier"  // Make sure Prettier is enabled as a plugin
-  ],
-  "rules": {
-    "react/react-in-jsx-scope": "off",
-    "react/jsx-filename-extension": [1, { "extensions": [".js", ".jsx"] }],
-    "quotes": ["error", "single"],  // Enforce single quotes
-    "react/self-closing-comp": "error",  // Enforce self-closing for void elements
-    "react/jsx-closing-tag-location": "error",  // Enforce correct closing tag location
-    "react/jsx-one-expression-per-line": "off",  // Allow multiple expressions on one line
-    "comma-dangle": ["error", "never"],  // No trailing commas
-    "prettier/prettier": [
-      "error",
-      {
-        "singleQuote": true,
-        "trailingComma": "none"
-      }
-    ]  // Enforce Prettier formatting for consistency
+    "plugins": ["prettier"],
+    "rules": {
+    "prettier/prettier": ["error"]
   },
   "settings": {
     "react": {
