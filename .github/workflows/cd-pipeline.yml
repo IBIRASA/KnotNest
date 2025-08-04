@@ -128,11 +128,18 @@ jobs:
 
       - name: Azure Login
         run: |
+          echo "Attempting login with Tenant ID: ad5c80fb-4e68-4158-90c5-60e23c034e76"
           az login --service-principal \
-            -u ${{ secrets.AZURE_CLIENT_ID }} \
-            -p ${{ secrets.AZURE_CLIENT_SECRET }} \
-            --tenant ${{ secrets.AZURE_TENANT_ID }}
-          az account set --subscription ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+            -u "${{ secrets.AZURE_CLIENT_ID }}" \
+            -p "${{ secrets.AZURE_CLIENT_SECRET }}" \
+            --tenant "ad5c80fb-4e68-4158-90c5-60e23c034e76" \
+            --allow-no-subscriptions
+
+          echo "Setting active subscription: ${{ secrets.AZURE_SUBSCRIPTION_ID }}"
+          az account set --subscription "${{ secrets.AZURE_SUBSCRIPTION_ID }}"
+
+          echo "Verifying login..."
+          az account show
 
       - name: Deploy Backend to Azure Container App
         run: |
