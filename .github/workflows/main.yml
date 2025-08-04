@@ -79,6 +79,9 @@ jobs:
     needs: security-scan
     outputs:
       version: ${{ steps.version.outputs.version }}
+    env:
+      IMAGE_NAME_BACKEND: knotnest_backend
+      IMAGE_NAME_FRONTEND: knotnest_frontend
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -89,30 +92,30 @@ jobs:
           VERSION=$(date +%Y%m%d)-${GITHUB_SHA::7}
           echo "version=$VERSION" >> $GITHUB_OUTPUT
 
-      - name: Log in to Docker Hub
+      - name: Docker Hub Login
+        if: ${{ secrets.DOCKER_USERNAME != '' && secrets.DOCKER_PASSWORD != '' }}
         run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
 
-      - name: Log in to Azure Container Registry (ACR)
+      - name: Azure Container Registry Login
+        if: ${{ secrets.ACR_USERNAME != '' && secrets.ACR_PASSWORD != '' && secrets.ACR_LOGIN_SERVER != '' }}
         run: echo "${{ secrets.ACR_PASSWORD }}" | docker login "${{ secrets.ACR_LOGIN_SERVER }}" -u "${{ secrets.ACR_USERNAME }}" --password-stdin
-
 
       - name: Build and Push Backend Image
         run: |
           docker build -t ${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME_BACKEND }}:${{ steps.version.outputs.version }} ./vowvenue_backend
           docker tag ${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME_BACKEND }}:${{ steps.version.outputs.version }} ${{ secrets.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME_BACKEND }}:${{ steps.version.outputs.version }}
-          docker push ${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME_BACKEND }}:${{ steps.version.outputs.version }}
           docker push ${{ secrets.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME_BACKEND }}:${{ steps.version.outputs.version }}
 
       - name: Build and Push Frontend Image
         run: |
           docker build -t ${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME_FRONTEND }}:${{ steps.version.outputs.version }} ./vow-venue-frontend
           docker tag ${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME_FRONTEND }}:${{ steps.version.outputs.version }} ${{ secrets.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME_FRONTEND }}:${{ steps.version.outputs.version }}
-          docker push ${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME_FRONTEND }}:${{ steps.version.outputs.version }}
           docker push ${{ secrets.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME_FRONTEND }}:${{ steps.version.outputs.version }}
 
       - name: Docker Logout
         if: always()
         run: docker logout
+
 
   deploy-production:
     runs-on: ubuntu-latest
