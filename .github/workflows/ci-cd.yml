@@ -121,9 +121,8 @@ jobs:
           tags: |
             ${{ env.ACR_LOGIN_SERVER }}/${{ env.BACKEND_APP }}:${{ env.VERSION }}
             ${{ env.ACR_LOGIN_SERVER }}/${{ env.BACKEND_APP }}:latest
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
+          cache-from: type=registry,ref=${{ env.ACR_LOGIN_SERVER }}/${{ env.BACKEND_APP }}:buildcache
+          cache-to: type=registry,ref=${{ env.ACR_LOGIN_SERVER }}/${{ env.BACKEND_APP }}:buildcache,mode=max
       - name: Build and push frontend
         uses: docker/build-push-action@v5
         with:
@@ -132,8 +131,8 @@ jobs:
           tags: |
             ${{ env.ACR_LOGIN_SERVER }}/${{ env.FRONTEND_APP }}:${{ env.VERSION }}
             ${{ env.ACR_LOGIN_SERVER }}/${{ env.FRONTEND_APP }}:latest
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=registry,ref=${{ env.ACR_LOGIN_SERVER }}/${{ env.FRONTEND_APP }}:buildcache
+          cache-to: type=registry,ref=${{ env.ACR_LOGIN_SERVER }}/${{ env.FRONTEND_APP }}:buildcache,mode=max
 
   deploy-production:
     needs: build-test-scan
