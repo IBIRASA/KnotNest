@@ -22,6 +22,9 @@ env:
   FRONTEND_APP: knot-frontend
   BACKEND_APP: knot-backend
 
+permisions:
+  contents: write
+
 jobs:
   build-test-scan:
     runs-on: ubuntu-latest
@@ -34,16 +37,18 @@ jobs:
 
       - name: Generate CHANGELOG
         run: |
-          echo "## $(date +'%Y-%m-%d') - Version ${VERSION:0:7}" >> CHANGELOG.md
-          echo "### Changes" >> CHANGELOG.md
-          git log --pretty=format:"- %s (%h)" --reverse HEAD^..HEAD >> CHANGELOG.md
-          echo "" >> CHANGELOG.md
+          mkdir -p ./artifacts
+          echo "## $(date +'%Y-%m-%d') - Version ${VERSION:0:7}" > ./artifacts/CHANGELOG.md
+          echo "### Changes" >> ./artifacts/CHANGELOG.md
+          git log --pretty=format:"- %s (%h)" --reverse HEAD^..HEAD >> ./artifacts/CHANGELOG.md
+          echo "" >> ./artifacts/CHANGELOG.md
+
 
       - name: Upload CHANGELOG
         uses: actions/upload-artifact@v4
         with:
           name: CHANGELOG
-          path: CHANGELOG.md
+          path: ./artifacts/CHANGELOG.md
           retention-days: 1
 
       - name: Set up Python
@@ -68,7 +73,13 @@ jobs:
           pip install safety
           safety check -r requirements.txt --output-file safety-report.json || true
         continue-on-error: true
-
+      - name: Upload backend security report
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-security-report
+          path: vowvenue_backend/safety-report.json
+          retention-days: 1
+          if-no-files-found: warn
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
@@ -93,13 +104,11 @@ jobs:
         run: npm audit --audit-level=high --json > npm-audit.json || true
         continue-on-error: true
 
-      - name: Upload security reports
+      - name: Upload frontend security report
         uses: actions/upload-artifact@v4
         with:
-          name: security-reports
-          path: |
-            vowvenue_backend/safety-report.json
-            vow-venue-frontend/npm-audit.json
+          name: frontend-security-report
+          path: vow-venue-frontend/npm-audit.json
           retention-days: 1
           if-no-files-found: warn
 
@@ -189,40 +198,26 @@ jobs:
             --resource-group ${{ env.RESOURCE_GROUP }} \
             --query "[].{revision:name, image:properties.template.containers[0].image, active:properties.active, createdTime:properties.createdTime}" \
             --output table
-
-  post-deployment:
+  create-release:
     needs: deploy-production
-    if: always()
+    if: success()
     runs-on: ubuntu-latest
     steps:
-      - name: Download all artifacts
+      - name: Download artifacts
         uses: actions/download-artifact@v4
         with:
           path: ./artifacts
           pattern: '*'
           merge-multiple: true
 
-      - name: Verify and prepare release files
+      - name: Prepare release assets
         run: |
-          # Create artifacts directory if it doesn't exist
           mkdir -p ./artifacts
-
-          # Create empty CHANGELOG if missing
-          if [ ! -f "./artifacts/CHANGELOG.md" ]; then
-            echo "No CHANGELOG available" > ./artifacts/CHANGELOG.md
-          fi
-
-          # Create empty security reports if missing
-          if [ ! -f "./artifacts/safety-report.json" ]; then
-            echo "{}" > ./artifacts/safety-report.json
-          fi
-
-          if [ ! -f "./artifacts/npm-audit.json" ]; then
-            echo "{}" > ./artifacts/npm-audit.json
-          fi
-
-          # Debug: Show final files
-          echo "Final release files:"
+          mkdir -p ./artifacts
+          [ -f "./artifacts/CHANGELOG.md" ] || echo "No CHANGELOG available" > ./artifacts/CHANGELOG.md
+          [ -f "./artifacts/safety-report.json" ] || echo "{}" > ./artifacts/safety-report.json
+          [ -f "./artifacts/npm-audit.json" ] || echo "{}" > ./artifacts/npm-audit.json
+          echo "Release assets prepared:"
           ls -la ./artifacts
 
       - name: Create GitHub Release
@@ -237,3 +232,6 @@ jobs:
           draft: false
           prerelease: false
           commit: ${{ github.sha }}
+          generateReleaseNotes: false
+
+  
