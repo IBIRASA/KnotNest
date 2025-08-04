@@ -43,13 +43,13 @@ function LandingPage() {
         </h1>
         <p
           className="lead mb-5"
-          style={{ fontSize: 'clamp(1.5rem, 2.5vw, 1.8rem)' }}
+          style={{
+            fontSize: 'clamp(1.5rem, 2.5vw, 1.8rem)'
+          }}
         >
           Plan your dream wedding effortlessly with <strong>KnotNest</strong> —
           your all-in-one platform for organizing, discovering, and booking
-          everything you need for your big day. From venues and photographers to
-          dresses and catering, we've got everything covered to make your
-          journey to &rsquo;I do&rsquo; smooth and memorable.
+          everything you need for your big day.
         </p>
 
         <Button
