@@ -11,6 +11,14 @@ const EventCard = ({
   onViewDetails,
   image = '/heroimage.jpg'
 }) => {
+  EventCard.propTypes = {
+  title: PropTypes.string.isRequired,
+  description: PropTypes.string.isRequired,
+  onEdit: PropTypes.func.isRequired,
+  onDelete: PropTypes.func.isRequired,
+  onViewDetails: PropTypes.func.isRequired,
+  image: PropTypes.string.isRequired,
+};
   return (
     <Card className="mb-4 shadow-sm h-100">
       <Card.Img
