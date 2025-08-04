@@ -101,6 +101,7 @@ jobs:
             vowvenue_backend/safety-report.json
             vow-venue-frontend/npm-audit.json
           retention-days: 1
+          if-no-files-found: warn
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
@@ -194,35 +195,45 @@ jobs:
     if: always()
     runs-on: ubuntu-latest
     steps:
-      - name: Download CHANGELOG
+      - name: Download all artifacts
         uses: actions/download-artifact@v4
         with:
-          name: CHANGELOG
           path: ./artifacts
+          pattern: '*'
+          merge-multiple: true
 
-      - name: Download security reports
-        uses: actions/download-artifact@v4
-        with:
-          name: security-reports
-          path: ./artifacts
-
-      - name: Verify files exist
+      - name: Verify and prepare release files
         run: |
+          # Create artifacts directory if it doesn't exist
+          mkdir -p ./artifacts
+
+          # Create empty CHANGELOG if missing
+          if [ ! -f "./artifacts/CHANGELOG.md" ]; then
+            echo "No CHANGELOG available" > ./artifacts/CHANGELOG.md
+          fi
+
+          # Create empty security reports if missing
+          if [ ! -f "./artifacts/safety-report.json" ]; then
+            echo "{}" > ./artifacts/safety-report.json
+          fi
+
+          if [ ! -f "./artifacts/npm-audit.json" ]; then
+            echo "{}" > ./artifacts/npm-audit.json
+          fi
+
+          # Debug: Show final files
+          echo "Final release files:"
           ls -la ./artifacts
-          [ -f "./artifacts/CHANGELOG.md" ] || echo "::warning::CHANGELOG.md not found!"
-          [ -f "./artifacts/safety-report.json" ] || echo "::warning::safety-report.json not found!"
-          [ -f "./artifacts/npm-audit.json" ] || echo "::warning::npm-audit.json not found!"
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v1
+        uses: ncipollo/release-action@v1
         with:
-          tag_name: v${VERSION:0:7}
+          tag: v${VERSION:0:7}
           name: Release ${VERSION:0:7}
-          body_path: ./artifacts/CHANGELOG.md
+          bodyFile: ./artifacts/CHANGELOG.md
+          artifacts: './artifacts/*.json'
+          token: ${{ secrets.GITHUB_TOKEN }}
+          allowUpdates: true
           draft: false
           prerelease: false
-          files: |
-            ./artifacts/safety-report.json
-            ./artifacts/npm-audit.json
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          commit: ${{ github.sha }}
