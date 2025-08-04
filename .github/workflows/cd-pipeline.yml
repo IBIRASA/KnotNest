@@ -162,24 +162,23 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Set up Azure CLI
-        uses: azure/setup-azure-cli@v2
+        uses: azure/setup-azcli@v1
 
       - name: Azure Login using Service Principal
         run: |
           az login --service-principal \
-            --username ${{ secrets.AZURE_CLIENT_ID }} \
-            --password ${{ secrets.AZURE_CLIENT_SECRET }} \
-            --tenant ${{ secrets.AZURE_TENANT_ID }}
-
-      - name: Set Azure Subscription
-        run: az account set --subscription ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+            --username ${{ env.AZURE_CLIENT_ID }} \
+            --password ${{ env.AZURE_CLIENT_SECRET }} \
+            --tenant ${{ env.AZURE_TENANT_ID }}
+          az account set --subscription ${{ env.AZURE_SUBSCRIPTION_ID }}
+          az account show
 
       - name: Deploy Backend to Azure Container App
         run: |
           az containerapp update \
             --name knot-backend \
             --resource-group ${{ env.RESOURCE_GROUP }} \
-            --image $DOCKER_USERNAME/knot-backend:$VERSION \
+            --image ${{ env.ACR_LOGIN_SERVER }}/knot-backend:${{ env.VERSION }} \
             --cpu 0.5 \
             --memory 1.0Gi
 
@@ -188,29 +187,9 @@ jobs:
           az containerapp update \
             --name knot-frontend \
             --resource-group ${{ env.RESOURCE_GROUP }} \
-            --image $DOCKER_USERNAME/knot-frontend:$VERSION \
+            --image ${{ env.ACR_LOGIN_SERVER }}/knot-frontend:${{ env.VERSION }} \
             --cpu 0.5 \
             --memory 1.0Gi
-
-      - name: Setup Azure Monitor Alerts
-        run: |
-          # Create availability alert for backend
-          az monitor metrics alert create \
-            --name "BackendAvailabilityAlert" \
-            --resource-group ${{ env.RESOURCE_GROUP }} \
-            --scopes "/subscriptions/${{ secrets.AZURE_SUBSCRIPTION_ID }}/resourceGroups/${{ env.RESOURCE_GROUP }}/providers/Microsoft.App/containerApps/knot-backend" \
-            --condition "avg requests.count < 1 where httpStatusCode == '200' for 5m" \
-            --description "Backend availability dropped below threshold" \
-            --severity 2
-
-          # Create error rate alert for frontend
-          az monitor metrics alert create \
-            --name "FrontendErrorAlert" \
-            --resource-group ${{ env.RESOURCE_GROUP }} \
-            --scopes "/subscriptions/${{ secrets.AZURE_SUBSCRIPTION_ID }}/resourceGroups/${{ env.RESOURCE_GROUP }}/providers/Microsoft.App/containerApps/knot-frontend" \
-            --condition "count http.status_code >= 500 for 5m" \
-            --description "Frontend error rate exceeded threshold" \
-            --severity 1
 
   post-deployment-verification:
     needs: deploy-production
