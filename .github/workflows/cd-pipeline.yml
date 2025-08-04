@@ -45,11 +45,11 @@ jobs:
 
       - name: Docker Hub Login
         run: |
-         echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+          echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin || exit 1
+
       - name: Azure Container Registry Login
         run: |
-          echo "${{ secrets.ACR_PASSWORD }}" | docker login "${{ secrets.ACR_LOGIN_SERVER }}" -u "${{ secrets.ACR_USERNAME }}" --password-stdin
-
+          echo "${{ secrets.ACR_PASSWORD }}" | docker login "${{ secrets.ACR_LOGIN_SERVER }}" -u "${{ secrets.ACR_USERNAME }}" --password-stdin || exit 1
 
       - name: Build and Push Backend Image to Docker Hub and ACR
         run: |
@@ -112,7 +112,7 @@ jobs:
           cat CHANGELOG.md >> temp_changelog.md
           mv temp_changelog.md CHANGELOG.md
           git add CHANGELOG.md
-          git commit -m "chore: update changelog for v${{ needs.build-and-push-images.outputs.version }}" || true
+          git commit -m "chore: update changelog for v${{ needs.build-and-push-images.outputs.version }}" || echo "No changes to commit"
           git push origin main || true
 
   post-deployment-verification:
