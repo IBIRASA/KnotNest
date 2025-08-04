@@ -76,16 +76,16 @@ jobs:
         with:
           node-version: '18'
           cache: 'npm'
+          cache-dependency-path: 'vow-venue-frontend/package-lock.json'
 
       - name: Install frontend dependencies
-        working-directory: ./src/vow-venue-frontend
+        working-directory: ./vow-venue-frontend
         run: |
-          if [ -f "package-lock.json" ]; then
-            npm ci
-          else
-            npm install
+          # Create lock file if missing
+          if [ ! -f "package-lock.json" ]; then
             npm install --package-lock-only
           fi
+          npm ci
 
       - name: Run frontend tests
         working-directory: ./src/vow-venue-frontend
