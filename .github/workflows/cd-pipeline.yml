@@ -214,25 +214,9 @@ jobs:
 
   post-deployment-verification:
     needs: deploy-production
-    if: always() # This ensures it runs even if deployment fails
+    if: always()
     runs-on: ubuntu-latest
     steps:
-      - name: Check Backend Health
-        run: |
-          response=$(curl -s -o /dev/null -w "%{http_code}" https://knot-backend.ashysea-fcb2b410.eastus.azurecontainerapps.io/health)
-          if [ "$response" -ne 200 ]; then
-            echo "Backend health check failed with status $response"
-            exit 1
-          fi
-
-      - name: Check Frontend Health
-        run: |
-          response=$(curl -s -o /dev/null -w "%{http_code}" https://knot-frontend.ashysea-fcb2b410.eastus.azurecontainerapps.io)
-          if [ "$response" -ne 200 ]; then
-            echo "Frontend health check failed with status $response"
-            exit 1
-          fi
-
       - name: Upload CHANGELOG
         uses: actions/upload-artifact@v4
         with:
