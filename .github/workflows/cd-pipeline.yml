@@ -17,6 +17,7 @@ env:
   AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
   AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
   VERSION: ${{ github.sha }}
+  RESOURCE_GROUP: knotnest-rg
 
 jobs:
   build-test-scan:
@@ -98,42 +99,39 @@ jobs:
         run: docker build -t $DOCKER_USERNAME/knot-backend:$VERSION ./vowvenue_backend
         if: success()
 
+      - name: Scan backend image
+        uses: aquasecurity/trivy-action@0.19.0
+        with:
+          image-ref: $DOCKER_USERNAME/knot-backend:$VERSION
+          severity: 'CRITICAL,HIGH'
+          exit-code: '1'
+          format: 'sarif'
+          output: trivy-backend-results.sarif
+          ignore-unfixed: true
+        if: success()
+
       - name: Build frontend image
         run: docker build -t $DOCKER_USERNAME/knot-frontend:$VERSION ./vow-venue-frontend
         if: success()
 
-      - name: Container image scan (backend)
+      - name: Scan frontend image
         uses: aquasecurity/trivy-action@0.19.0
         with:
-          image-ref: ${{ env.DOCKER_USERNAME }}/knot-backend:$VERSION
-          severity: 'CRITICAL'
+          image-ref: $DOCKER_USERNAME/knot-frontend:$VERSION
+          severity: 'CRITICAL,HIGH'
           exit-code: '1'
-          format: 'table'
-          output: trivy-backend-report.txt
+          format: 'sarif'
+          output: trivy-frontend-results.sarif
+          ignore-unfixed: true
         if: success()
 
-      - name: Upload backend image scan report
+      - name: Upload security scan results
         uses: actions/upload-artifact@v4
         with:
-          name: trivy-backend-report
-          path: trivy-backend-report.txt
-        if: always()
-
-      - name: Container image scan (frontend)
-        uses: aquasecurity/trivy-action@0.19.0
-        with:
-          image-ref: ${{ env.DOCKER_USERNAME }}/knot-frontend:$VERSION
-          severity: 'CRITICAL'
-          exit-code: '1'
-          format: 'table'
-          output: trivy-frontend-report.txt
-        if: success()
-
-      - name: Upload frontend image scan report
-        uses: actions/upload-artifact@v4
-        with:
-          name: trivy-frontend-report
-          path: trivy-frontend-report.txt
+          name: trivy-scan-results
+          path: |
+            trivy-backend-results.sarif
+            trivy-frontend-results.sarif
         if: always()
 
       - name: Push backend image
@@ -175,7 +173,7 @@ jobs:
         run: |
           az containerapp update \
             --name knot-backend \
-            --resource-group knotnest-rg \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
             --image $DOCKER_USERNAME/knot-backend:$VERSION \
             --cpu 0.5 \
             --memory 1.0Gi
@@ -184,7 +182,7 @@ jobs:
         run: |
           az containerapp update \
             --name knot-frontend \
-            --resource-group knotnest-rg \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
             --image $DOCKER_USERNAME/knot-frontend:$VERSION \
             --cpu 0.5 \
             --memory 1.0Gi
@@ -194,8 +192,8 @@ jobs:
           # Create availability alert for backend
           az monitor metrics alert create \
             --name "BackendAvailabilityAlert" \
-            --resource-group knotnest-rg \
-            --scopes "/subscriptions/${{ secrets.AZURE_SUBSCRIPTION_ID }}/resourceGroups/knotnest-rg/providers/Microsoft.App/containerApps/knot-backend" \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --scopes "/subscriptions/${{ secrets.AZURE_SUBSCRIPTION_ID }}/resourceGroups/${{ env.RESOURCE_GROUP }}/providers/Microsoft.App/containerApps/knot-backend" \
             --condition "avg requests.count < 1 where httpStatusCode == '200' for 5m" \
             --description "Backend availability dropped below threshold" \
             --severity 2
@@ -203,8 +201,8 @@ jobs:
           # Create error rate alert for frontend
           az monitor metrics alert create \
             --name "FrontendErrorAlert" \
-            --resource-group knotnest-rg \
-            --scopes "/subscriptions/${{ secrets.AZURE_SUBSCRIPTION_ID }}/resourceGroups/knotnest-rg/providers/Microsoft.App/containerApps/knot-frontend" \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --scopes "/subscriptions/${{ secrets.AZURE_SUBSCRIPTION_ID }}/resourceGroups/${{ env.RESOURCE_GROUP }}/providers/Microsoft.App/containerApps/knot-frontend" \
             --condition "count http.status_code >= 500 for 5m" \
             --description "Frontend error rate exceeded threshold" \
             --severity 1
