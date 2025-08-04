@@ -2,6 +2,7 @@ import React from 'react';
 import { Card } from 'react-bootstrap';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faEye, faEdit, faTrashAlt } from '@fortawesome/free-solid-svg-icons';
+import PropTypes from 'prop-types';
 
 const EventCard = ({
   title,
@@ -9,21 +10,13 @@ const EventCard = ({
   onEdit,
   onDelete,
   onViewDetails,
-  image = '/heroimage.jpg'
+  image
 }) => {
-  EventCard.propTypes = {
-  title: PropTypes.string.isRequired,
-  description: PropTypes.string.isRequired,
-  onEdit: PropTypes.func.isRequired,
-  onDelete: PropTypes.func.isRequired,
-  onViewDetails: PropTypes.func.isRequired,
-  image: PropTypes.string.isRequired,
-};
   return (
     <Card className="mb-4 shadow-sm h-100">
       <Card.Img
         variant="top"
-        src={image}
+        src={image || '/heroimage.jpg'} // Default image fallback
         alt={`Cover for ${title}`}
         style={{
           height: '200px',
@@ -78,6 +71,16 @@ const EventCard = ({
       </Card.Body>
     </Card>
   );
+};
+
+// Define PropTypes outside the component
+EventCard.propTypes = {
+  title: PropTypes.string.isRequired,
+  description: PropTypes.string.isRequired,
+  onEdit: PropTypes.func.isRequired,
+  onDelete: PropTypes.func.isRequired,
+  onViewDetails: PropTypes.func.isRequired,
+  image: PropTypes.string
 };
 
 export default EventCard;
