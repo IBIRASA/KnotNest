@@ -1,6 +1,6 @@
 module.exports = {
   transform: {
-    "^.+\\.jsx?$": "babel-jest"
+    '^.+\\.jsx?$': 'babel-jest'
   },
-  moduleDirectories: ["node_modules", "src"],
+  moduleDirectories: ['node_modules', 'src']
 };
