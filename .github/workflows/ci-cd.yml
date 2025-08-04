@@ -1,16 +1,15 @@
 name: CI/CD
 
 on:
+  workflow_dispatch:
   push:
-    branches:
-      - main
+    branches: [main, develop]
     paths:
       - 'vow-venue-frontend/**'
       - 'vowvenue_backend/**'
       - '.github/workflows/ci-cd.yml'
   pull_request:
-    branches:
-      - main
+    branches: [main]
 
 env:
   ACR_LOGIN_SERVER: ${{ secrets.ACR_LOGIN_SERVER }}
