@@ -1,5 +1,5 @@
 # Use official Python image
-FROM python:3.11-slim
+FROM python:3.11
 
 # Set environment variables
 ENV PYTHONDONTWRITEBYTECODE=1
@@ -8,14 +8,12 @@ ENV PYTHONUNBUFFERED=1
 # Set working directory
 WORKDIR /app
 
-# Install dependencies first to leverage Docker cache
-COPY requirements.txt .
+# Copy project files
+COPY . .
 
 # Install dependencies
-RUN pip install --upgrade pip && pip install -r requirements.txt
-
-# Copy project files (after installing dependencies to avoid unnecessary rebuilds)
-COPY . .
+RUN pip install --upgrade pip
+RUN pip install -r requirements.txt
 
 # Expose port 8000
 EXPOSE 8000
