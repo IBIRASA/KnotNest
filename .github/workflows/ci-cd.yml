@@ -1,4 +1,4 @@
-name: CI/CD
+name: CI/CD Pipeline
 
 on:
   workflow_dispatch:
@@ -30,15 +30,23 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0 # Required for full git history in CHANGELOG
+          fetch-depth: 0
+          path: 'src'
 
       - name: Generate CHANGELOG
+        working-directory: ./src
         run: |
           echo "## $(date +'%Y-%m-%d') - Version ${VERSION:0:7}" >> CHANGELOG.md
           echo "### Changes" >> CHANGELOG.md
           git log --pretty=format:"- %s (%h)" --reverse HEAD^..HEAD >> CHANGELOG.md
           echo "" >> CHANGELOG.md
-          cat CHANGELOG.md
+
+      - name: Upload CHANGELOG
+        uses: actions/upload-artifact@v4
+        with:
+          name: CHANGELOG
+          path: src/CHANGELOG.md
+          retention-days: 1
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -47,17 +55,17 @@ jobs:
           cache: 'pip'
 
       - name: Install backend dependencies
-        working-directory: ./vowvenue_backend
+        working-directory: ./src/vowvenue_backend
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
       - name: Run backend tests
-        working-directory: ./vowvenue_backend
+        working-directory: ./src/vowvenue_backend
         run: python manage.py test
 
       - name: Backend security scan
-        working-directory: ./vowvenue_backend
+        working-directory: ./src/vowvenue_backend
         run: |
           pip install safety
           safety check -r requirements.txt --output-file safety-report.json
@@ -70,15 +78,21 @@ jobs:
           cache: 'npm'
 
       - name: Install frontend dependencies
-        working-directory: ./vow-venue-frontend
-        run: npm ci
+        working-directory: ./src/vow-venue-frontend
+        run: |
+          if [ -f "package-lock.json" ]; then
+            npm ci
+          else
+            npm install
+            npm install --package-lock-only
+          fi
 
       - name: Run frontend tests
-        working-directory: ./vow-venue-frontend
+        working-directory: ./src/vow-venue-frontend
         run: npm test -- --watchAll=false --ci
 
       - name: Frontend security scan
-        working-directory: ./vow-venue-frontend
+        working-directory: ./src/vow-venue-frontend
         run: npm audit --audit-level=high --json > npm-audit.json
         continue-on-error: true
 
@@ -87,8 +101,8 @@ jobs:
         with:
           name: security-reports
           path: |
-            vowvenue_backend/safety-report.json
-            vow-venue-frontend/npm-audit.json
+            src/vowvenue_backend/safety-report.json
+            src/vow-venue-frontend/npm-audit.json
 
       - name: Docker setup
         uses: docker/setup-buildx-action@v3
@@ -105,7 +119,7 @@ jobs:
       - name: Build and push backend
         uses: docker/build-push-action@v5
         with:
-          context: ./vowvenue_backend
+          context: ./src/vowvenue_backend
           push: true
           tags: |
             ${{ env.ACR_LOGIN_SERVER }}/${{ env.BACKEND_APP }}:${{ env.VERSION }}
@@ -116,7 +130,7 @@ jobs:
       - name: Build and push frontend
         uses: docker/build-push-action@v5
         with:
-          context: ./vow-venue-frontend
+          context: ./src/vow-venue-frontend
           push: true
           tags: |
             ${{ env.ACR_LOGIN_SERVER }}/${{ env.FRONTEND_APP }}:${{ env.VERSION }}
@@ -171,7 +185,7 @@ jobs:
     if: always()
     runs-on: ubuntu-latest
     steps:
-      - name: Download CHANGELOG
+      - name: Download artifacts
         uses: actions/download-artifact@v4
         with:
           name: CHANGELOG
@@ -185,3 +199,6 @@ jobs:
           body_path: ./artifacts/CHANGELOG.md
           draft: false
           prerelease: false
+          files: |
+            ./artifacts/safety-report.json
+            ./artifacts/npm-audit.json
