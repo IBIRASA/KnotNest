@@ -24,12 +24,22 @@ resource "azurerm_container_registry" "acr" {
   admin_enabled       = true
 }
 
+resource "azurerm_log_analytics_workspace" "main" {
+  name                = "knot-logs"
+  location            = azurerm_resource_group.example.location
+  resource_group_name = azurerm_resource_group.example.name
+  sku                 = "PerGB2018"
+  retention_in_days   = 30
+}
+
 resource "azurerm_container_app_environment" "knot_env" {
   name                = "knot-env"
   location            = azurerm_resource_group.example.location
   resource_group_name = azurerm_resource_group.example.name
+  log_analytics_workspace_id = azurerm_log_analytics_workspace.main.id
 }
 
+# Production Backend Container App
 resource "azurerm_container_app" "backend" {
   name                         = "knot-backend"
   container_app_environment_id = azurerm_container_app_environment.knot_env.id
@@ -40,7 +50,7 @@ resource "azurerm_container_app" "backend" {
   template {
     container {
       name   = "backend"
-      image  = "${azurerm_container_registry.acr.login_server}/knotnest_backend:latest"
+      image  = "ibirasa/vowvenue-backend:latest"
       cpu    = 0.5
       memory = "1.0Gi"
       
@@ -48,31 +58,29 @@ resource "azurerm_container_app" "backend" {
         name  = "PORT"
         value = "8000"
       }
+      
+      env {
+        name  = "ENVIRONMENT"
+        value = "production"
+      }
     }
+
+    min_replicas = 1
+    max_replicas = 5
   }
 
   ingress {
     external_enabled = true
     target_port      = 8000
-
+    
     traffic_weight {
-      percentage      = 100
+      percentage = 100
       latest_revision = true
     }
   }
-
-  registry {
-    server               = azurerm_container_registry.acr.login_server
-    username             = azurerm_container_registry.acr.admin_username
-    password_secret_name = "acr-password"
-  }
-
-  secret {
-    name  = "acr-password"
-    value = azurerm_container_registry.acr.admin_password
-  }
 }
 
+# Production Frontend Container App
 resource "azurerm_container_app" "frontend" {
   name                         = "knot-frontend"
   container_app_environment_id = azurerm_container_app_environment.knot_env.id
@@ -83,30 +91,114 @@ resource "azurerm_container_app" "frontend" {
   template {
     container {
       name   = "frontend"
-      image  = "knotcontaineracr123.azurecr.io/knotnest_frontend:latest" 
-      cpu    = 0.5
-      memory = "1.0Gi"
+      image  = "ibirasa/vowvenue-frontend:latest"
+      cpu    = 0.25
+      memory = "0.5Gi"
+      
+      env {
+        name  = "REACT_APP_API_URL"
+        value = "https://${azurerm_container_app.backend.latest_revision_fqdn}"
+      }
+      
+      env {
+        name  = "ENVIRONMENT"
+        value = "production"
+      }
     }
+
+    min_replicas = 1
+    max_replicas = 3
   }
 
   ingress {
     external_enabled = true
     target_port      = 80
-
+    
     traffic_weight {
-      percentage      = 100
+      percentage = 100
       latest_revision = true
     }
   }
+}
 
-  registry {
-    server               = azurerm_container_registry.acr.login_server
-    username             = azurerm_container_registry.acr.admin_username
-    password_secret_name = "acr-password"
+# Staging Backend Container App
+resource "azurerm_container_app" "backend_staging" {
+  name                         = "knot-backend-staging"
+  container_app_environment_id = azurerm_container_app_environment.knot_env.id
+  resource_group_name          = azurerm_resource_group.example.name
+
+  revision_mode = "Single"
+
+  template {
+    container {
+      name   = "backend"
+      image  = "ibirasa/vowvenue-backend:latest"
+      cpu    = 0.25
+      memory = "0.5Gi"
+      
+      env {
+        name  = "PORT"
+        value = "8000"
+      }
+      
+      env {
+        name  = "ENVIRONMENT"
+        value = "staging"
+      }
+    }
+
+    min_replicas = 1
+    max_replicas = 2
   }
 
-  secret {
-    name  = "acr-password"
-    value = azurerm_container_registry.acr.admin_password
+  ingress {
+    external_enabled = true
+    target_port      = 8000
+    
+    traffic_weight {
+      percentage = 100
+      latest_revision = true
+    }
+  }
+}
+
+# Staging Frontend Container App
+resource "azurerm_container_app" "frontend_staging" {
+  name                         = "knot-frontend-staging"
+  container_app_environment_id = azurerm_container_app_environment.knot_env.id
+  resource_group_name          = azurerm_resource_group.example.name
+
+  revision_mode = "Single"
+
+  template {
+    container {
+      name   = "frontend"
+      image  = "ibirasa/vowvenue-frontend:latest"
+      cpu    = 0.25
+      memory = "0.5Gi"
+      
+      env {
+        name  = "REACT_APP_API_URL"
+        value = "https://${azurerm_container_app.backend_staging.latest_revision_fqdn}"
+      }
+      
+      env {
+        name  = "ENVIRONMENT"
+        value = "staging"
+      }
+    }
+
+    min_replicas = 1
+    max_replicas = 2
+  }
+
+  ingress {
+    external_enabled = true
+    target_port      = 80
+    
+    traffic_weight {
+      percentage = 100
+      latest_revision = true
+    }
   }
 }

@@ -1,0 +1,96 @@
+groups:
+  - name: application_alerts
+    rules:
+      - alert: ApplicationDown
+        expr: up{job=~"django_app_.*|frontend_.*"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Application {{ $labels.instance }} is down"
+          description: "{{ $labels.job }} has been down for more than 1 minute."
+
+      - alert: HighResponseTime
+        expr: http_request_duration_seconds{quantile="0.95"} > 2
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High response time on {{ $labels.instance }}"
+          description: "95th percentile response time is above 2 seconds for {{ $labels.job }}."
+
+      - alert: HighErrorRate
+        expr: rate(http_requests_total{status=~"5.."}[5m]) > 0.1
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "High error rate on {{ $labels.instance }}"
+          description: "Error rate is above 10% for {{ $labels.job }}."
+
+      - alert: CPUUsageHigh
+        expr: 100 - (avg by(instance) (irate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 80
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High CPU usage on {{ $labels.instance }}"
+          description: "CPU usage is above 80% for more than 5 minutes."
+
+      - alert: MemoryUsageHigh
+        expr: (node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes) / node_memory_MemTotal_bytes * 100 > 85
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High memory usage on {{ $labels.instance }}"
+          description: "Memory usage is above 85% for more than 5 minutes."
+
+      - alert: DiskSpaceLow
+        expr: (node_filesystem_size_bytes{fstype!="tmpfs"} - node_filesystem_free_bytes{fstype!="tmpfs"}) / node_filesystem_size_bytes{fstype!="tmpfs"} * 100 > 90
+        for: 10m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Low disk space on {{ $labels.instance }}"
+          description: "Disk usage is above 90% for more than 10 minutes."
+
+  - name: deployment_alerts
+    rules:
+      - alert: DeploymentFailed
+        expr: increase(deployment_failures_total[1h]) > 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Deployment failed for {{ $labels.environment }}"
+          description: "A deployment has failed in the {{ $labels.environment }} environment."
+
+      - alert: HealthCheckFailing
+        expr: probe_success{job="blackbox"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Health check failing for {{ $labels.instance }}"
+          description: "Health check has been failing for {{ $labels.instance }} for more than 2 minutes."
+
+  - name: security_alerts
+    rules:
+      - alert: HighSecurityVulnerabilities
+        expr: security_vulnerabilities_high > 5
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High number of security vulnerabilities detected"
+          description: "More than 5 high severity vulnerabilities detected in the latest scan."
+
+      - alert: CriticalSecurityVulnerabilities
+        expr: security_vulnerabilities_critical > 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Critical security vulnerabilities detected"
+          description: "Critical security vulnerabilities detected in the latest scan. Immediate action required."

@@ -23,5 +23,6 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/', views.test_api),
     path('api/events/', include('events.urls')),
-    
+    path('health/', views.health_check, name='health_check'),
+    path('metrics/', views.metrics, name='metrics'),
 ]
