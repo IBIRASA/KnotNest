@@ -70,13 +70,13 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
+      # ...existing code...
       - name: Build backend image
         run: docker build -t $DOCKER_USERNAME/knot-backend ./vowvenue_backend
 
       - name: Build frontend image
         run: docker build -t $DOCKER_USERNAME/knot-frontend ./vow-venue-frontend
 
-      # ...existing code...
       - name: Container image scan (backend)
         uses: aquasecurity/trivy-action@v0.19.0
         with:
@@ -86,11 +86,13 @@ jobs:
         uses: aquasecurity/trivy-action@v0.19.0
         with:
           image-ref: ${{ env.DOCKER_USERNAME }}/knot-frontend
-        # ...exi
+
+      - name: Push backend image
         run: docker push $DOCKER_USERNAME/knot-backend
 
       - name: Push frontend image
         run: docker push $DOCKER_USERNAME/knot-frontend
+  # ...existing code...
 
   deploy-production:
     needs: build-test-scan
