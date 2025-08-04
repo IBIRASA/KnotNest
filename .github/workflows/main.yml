@@ -4,18 +4,24 @@ on:
   push:
     branches:
       - main
+      - develop
   pull_request:
     branches:
       - main
 
+env:
+  DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+  DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+  AZURE_CREDENTIALS: ${{ secrets.AZURE_CREDENTIALS }}
+  ACR_LOGIN_SERVER: ${{ secrets.ACR_LOGIN_SERVER }}
+  ACR_USERNAME: ${{ secrets.ACR_USERNAME }}
+  ACR_PASSWORD: ${{ secrets.ACR_PASSWORD }}
+
 jobs:
-  build-and-deploy:
+  # Build and Test Job
+  build-and-test:
     runs-on: ubuntu-latest
-
-    env:
-      DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
-      DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
-
+    
     services:
       postgres:
         image: postgres:14
@@ -33,7 +39,9 @@ jobs:
 
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set up Python
         uses: actions/setup-python@v4
@@ -42,7 +50,9 @@ jobs:
 
       - name: Install Backend Dependencies
         working-directory: vowvenue_backend
-        run: pip install -r requirements.txt
+        run: |
+          pip install -r requirements.txt
+          pip install -r requirements_test.txt
 
       - name: Wait for Database to be Ready
         run: |
@@ -54,45 +64,132 @@ jobs:
       - name: Run Backend Tests
         working-directory: vowvenue_backend
         env:
-          DATABASE_URL: postgres://postgres:postgres@postgres:5432/mydb
+          DATABASE_URL: postgres://postgres:postgres@localhost:5432/mydb
         run: python manage.py test
 
       - name: Set up Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: '20'
 
       - name: Install Frontend Dependencies
         working-directory: vow-venue-frontend
-        run: npm install
+        run: npm ci
 
       - name: Run Frontend Tests
         working-directory: vow-venue-frontend
-        run: npm test -- --watchAll=false
+        run: npm test -- --watchAll=false --coverage
 
-      - name: Scan for Vulnerabilities (Frontend)
+      - name: Upload Test Coverage
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: vow-venue-frontend/coverage/
+
+  # Security Scanning Job
+  security-scan:
+    runs-on: ubuntu-latest
+    needs: build-and-test
+    
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install Backend Dependencies
+        working-directory: vowvenue_backend
+        run: pip install -r requirements.txt
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Frontend Dependencies
         working-directory: vow-venue-frontend
-        run: npm audit --audit-level=high || true
+        run: npm ci
 
-      - name: Scan for Vulnerabilities (Backend)
+      - name: Frontend Vulnerability Scan
+        working-directory: vow-venue-frontend
+        run: |
+          npm audit --audit-level=moderate --json > frontend-audit.json || true
+          npm audit --audit-level=moderate
+
+      - name: Backend Vulnerability Scan
         working-directory: vowvenue_backend
         run: |
-          pip install safety
-          safety check || true
+          pip install safety bandit
+          safety check --json --output safety-report.json || true
+          safety check
+          bandit -r . -f json -o bandit-report.json || true
+          bandit -r .
+
+      - name: Upload Security Reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-reports
+          path: |
+            vow-venue-frontend/frontend-audit.json
+            vowvenue_backend/safety-report.json
+            vowvenue_backend/bandit-report.json
+
+  # Build and Push Images Job
+  build-images:
+    runs-on: ubuntu-latest
+    needs: [build-and-test, security-scan]
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'
+    
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      environment: ${{ steps.environment.outputs.environment }}
+    
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Determine Environment
+        id: environment
+        run: |
+          if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+            echo "environment=production" >> $GITHUB_OUTPUT
+          else
+            echo "environment=staging" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Generate Version
+        id: version
+        run: |
+          if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+            VERSION=$(date +%Y%m%d)-${GITHUB_SHA::7}
+          else
+            VERSION=staging-$(date +%Y%m%d)-${GITHUB_SHA::7}
+          fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Generated version: $VERSION"
 
       - name: Log in to Docker Hub
         run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
 
-      - name: Build Docker Image (Frontend)
-        run: docker build -t ${{ secrets.DOCKER_USERNAME }}/vowvenue-frontend:latest ./vow-venue-frontend
+      - name: Log in to Azure Container Registry
+        run: echo "${{ secrets.ACR_PASSWORD }}" | docker login ${{ secrets.ACR_LOGIN_SERVER }} -u ${{ secrets.ACR_USERNAME }} --password-stdin
 
-      - name: Build Docker Image (Backend)
-        run: docker build -t ${{ secrets.DOCKER_USERNAME }}/vowvenue-backend:latest ./vowvenue_backend
-
-      - name: Push Docker Images to Docker Hub
+      - name: Build Docker Images
         run: |
-          docker push ${{ secrets.DOCKER_USERNAME }}/vowvenue-frontend:latest
-          docker push ${{ secrets.DOCKER_USERNAME }}/vowvenue-backend:latest
+          # Build Frontend
+          docker build -t ${{ secrets.DOCKER_USERNAME }}/vowvenue-frontend:${{ steps.version.outputs.version }} ./vow-venue-frontend
+          docker build -t ${{ secrets.DOCKER_USERNAME }}/vowvenue-frontend:latest ./vow-venue-frontend
+          docker build -t ${{ secrets.ACR_LOGIN_SERVER }}/knotnest_frontend:${{ steps.version.outputs.version }} ./vow-venue-frontend
+          docker build -t ${{ secrets.ACR_LOGIN_SERVER }}/knotnest_frontend:latest ./vow-venue-frontend
+          
+          # Build Backend
+          docker build -t ${{ secrets.DOCKER_USERNAME }}/vowvenue-backend:${{ steps.version.outputs.version }} ./vowvenue_backend
+          docker build -t ${{ secrets.DOCKER_USERNAME }}/vowvenue-backend:latest ./vowvenue_backend
+          docker build -t ${{ secrets.ACR_LOGIN_SERVER }}/knotnest_backend:${{ steps.version.outputs.version }} ./vowvenue_backend
+          docker build -t ${{ secrets.ACR_LOGIN_SERVER }}/knotnest_backend:latest ./vowvenue_backend
 
       - name: Install Trivy
         run: |
@@ -103,41 +200,171 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y trivy
 
-      - name: Run Trivy Scan (Non-blocking)
-        run: trivy image --severity HIGH ${{ secrets.DOCKER_USERNAME }}/vowvenue-backend:latest || true
+      - name: Container Security Scan
+        run: |
+          # Scan frontend image
+          trivy image --severity HIGH,CRITICAL --format json -o frontend-trivy-report.json ${{ secrets.DOCKER_USERNAME }}/vowvenue-frontend:${{ steps.version.outputs.version }} || true
+          trivy image --severity HIGH,CRITICAL ${{ secrets.DOCKER_USERNAME }}/vowvenue-frontend:${{ steps.version.outputs.version }}
+          
+          # Scan backend image
+          trivy image --severity HIGH,CRITICAL --format json -o backend-trivy-report.json ${{ secrets.DOCKER_USERNAME }}/vowvenue-backend:${{ steps.version.outputs.version }} || true
+          trivy image --severity HIGH,CRITICAL ${{ secrets.DOCKER_USERNAME }}/vowvenue-backend:${{ steps.version.outputs.version }}
 
-      - name: Save Trivy Report
-        run: trivy image --severity HIGH --format json -o trivy-report.json ${{ secrets.DOCKER_USERNAME }}/vowvenue-backend:latest || true
-
-      - name: Upload Trivy Report
+      - name: Upload Container Security Reports
         uses: actions/upload-artifact@v4
         with:
-          name: trivy-report
-          path: trivy-report.json
+          name: container-security-reports-${{ steps.version.outputs.version }}
+          path: |
+            frontend-trivy-report.json
+            backend-trivy-report.json
+
+      - name: Push Images to Registries
+        run: |
+          # Push to Docker Hub
+          docker push ${{ secrets.DOCKER_USERNAME }}/vowvenue-frontend:${{ steps.version.outputs.version }}
+          docker push ${{ secrets.DOCKER_USERNAME }}/vowvenue-frontend:latest
+          docker push ${{ secrets.DOCKER_USERNAME }}/vowvenue-backend:${{ steps.version.outputs.version }}
+          docker push ${{ secrets.DOCKER_USERNAME }}/vowvenue-backend:latest
+          
+          # Push to Azure Container Registry
+          docker push ${{ secrets.ACR_LOGIN_SERVER }}/knotnest_frontend:${{ steps.version.outputs.version }}
+          docker push ${{ secrets.ACR_LOGIN_SERVER }}/knotnest_frontend:latest
+          docker push ${{ secrets.ACR_LOGIN_SERVER }}/knotnest_backend:${{ steps.version.outputs.version }}
+          docker push ${{ secrets.ACR_LOGIN_SERVER }}/knotnest_backend:latest
+
+  # Deploy to Staging
+  deploy-staging:
+    runs-on: ubuntu-latest
+    needs: build-images
+    if: github.ref == 'refs/heads/develop'
+    environment: staging
+    
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
 
       - name: Log in to Azure
         uses: azure/login@v1
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      - name: Deploy to Production (Using Azure CLI)
+      - name: Deploy to Staging Environment
         run: |
-          az vm run-command invoke \
-          --resource-group knotnest-rg \
-          --name knotnest-vm \
-          --command-id RunShellScript \
-           --scripts "
-            cd /home/azureuser || exit 1
-          if [ ! -d KnotNest ]; then
-          git clone https://github.com/IBIRASA/KnotNest.git
-          fi
-            cd KnotNest
-            git reset --hard HEAD
-            git clean -fd
-            git pull origin main
-            docker-compose down
-            docker-compose pull
-            docker-compose up -d --force-recreate
-          "
-      - name: Log out from Docker Hub
+          # Update staging container apps
+          az containerapp update \
+            --name knot-backend-staging \
+            --resource-group knotnest-rg \
+            --image ${{ secrets.ACR_LOGIN_SERVER }}/knotnest_backend:${{ needs.build-images.outputs.version }} || \
+          az containerapp create \
+            --name knot-backend-staging \
+            --resource-group knotnest-rg \
+            --environment knot-env \
+            --image ${{ secrets.ACR_LOGIN_SERVER }}/knotnest_backend:${{ needs.build-images.outputs.version }} \
+            --target-port 8000 \
+            --ingress external \
+            --registry-server ${{ secrets.ACR_LOGIN_SERVER }} \
+            --registry-username ${{ secrets.ACR_USERNAME }} \
+            --registry-password ${{ secrets.ACR_PASSWORD }} \
+            --cpu 0.5 \
+            --memory 1.0Gi
+
+          az containerapp update \
+            --name knot-frontend-staging \
+            --resource-group knotnest-rg \
+            --image ${{ secrets.ACR_LOGIN_SERVER }}/knotnest_frontend:${{ needs.build-images.outputs.version }} || \
+          az containerapp create \
+            --name knot-frontend-staging \
+            --resource-group knotnest-rg \
+            --environment knot-env \
+            --image ${{ secrets.ACR_LOGIN_SERVER }}/knotnest_frontend:${{ needs.build-images.outputs.version }} \
+            --target-port 80 \
+            --ingress external \
+            --registry-server ${{ secrets.ACR_LOGIN_SERVER }} \
+            --registry-username ${{ secrets.ACR_USERNAME }} \
+            --registry-password ${{ secrets.ACR_PASSWORD }} \
+            --cpu 0.5 \
+            --memory 1.0Gi
+
+  # Deploy to Production
+  deploy-production:
+    runs-on: ubuntu-latest
+    needs: build-images
+    if: github.ref == 'refs/heads/main'
+    environment: production
+    
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Log in to Azure
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Deploy to Production Environment
+        run: |
+          # Update production container apps
+          az containerapp update \
+            --name knot-backend \
+            --resource-group knotnest-rg \
+            --image ${{ secrets.ACR_LOGIN_SERVER }}/knotnest_backend:${{ needs.build-images.outputs.version }}
+
+          az containerapp update \
+            --name knot-frontend \
+            --resource-group knotnest-rg \
+            --image ${{ secrets.ACR_LOGIN_SERVER }}/knotnest_frontend:${{ needs.build-images.outputs.version }}
+
+      - name: Create Git Tag
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git tag -a v${{ needs.build-images.outputs.version }} -m "Release version ${{ needs.build-images.outputs.version }}"
+          git push origin v${{ needs.build-images.outputs.version }}
+
+      - name: Update CHANGELOG
+        run: |
+          echo "## [v${{ needs.build-images.outputs.version }}] - $(date +%Y-%m-%d)" > temp_changelog.md
+          echo "" >> temp_changelog.md
+          echo "### Deployed" >> temp_changelog.md
+          echo "- Automated deployment to production" >> temp_changelog.md
+          echo "- Version: ${{ needs.build-images.outputs.version }}" >> temp_changelog.md
+          echo "" >> temp_changelog.md
+          cat CHANGELOG.md >> temp_changelog.md
+          mv temp_changelog.md CHANGELOG.md
+          
+          git add CHANGELOG.md
+          git commit -m "chore: update changelog for v${{ needs.build-images.outputs.version }}" || true
+          git push origin main || true
+
+  # Post-deployment verification
+  post-deployment:
+    runs-on: ubuntu-latest
+    needs: [deploy-production, deploy-staging]
+    if: always() && (needs.deploy-production.result == 'success' || needs.deploy-staging.result == 'success')
+    
+    steps:
+      - name: Health Check Production
+        if: needs.deploy-production.result == 'success'
+        run: |
+          # Get production URLs and perform health checks
+          chmod +x scripts/health-check.sh
+          ./scripts/health-check.sh \
+            --frontend-url "https://knot-frontend.ashysea-fcb2b410.eastus.azurecontainerapps.io" \
+            --backend-url "https://knot-backend.ashysea-fcb2b410.eastus.azurecontainerapps.io" \
+            --max-retries 20 \
+            --retry-interval 15
+          
+      - name: Health Check Staging
+        if: needs.deploy-staging.result == 'success'
+        run: |
+          # Get staging URLs and perform health checks
+          chmod +x scripts/health-check.sh
+          ./scripts/health-check.sh \
+            --frontend-url "https://knot-frontend-staging.ashysea-fcb2b410.eastus.azurecontainerapps.io" \
+            --backend-url "https://knot-backend-staging.ashysea-fcb2b410.eastus.azurecontainerapps.io" \
+            --max-retries 15 \
+            --retry-interval 10
+
+      - name: Clean up Docker
+        if: always()
         run: docker logout
