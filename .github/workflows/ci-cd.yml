@@ -188,7 +188,6 @@ jobs:
             --resource-group ${{ env.RESOURCE_GROUP }} \
             --query "[].{revision:name, image:properties.template.containers[0].image, active:properties.active, createdTime:properties.createdTime}" \
             --output table
-
   create-release:
     needs: deploy-production
     if: success()
@@ -211,13 +210,10 @@ jobs:
       - name: Create GitHub Release
         uses: ncipollo/release-action@v1
         with:
-          tag: v${VERSION:0:7}
-          name: Release ${VERSION:0:7}
+          tag: release-$(date +'%Y%m%d-%H%M%S')
+          name: Release $(date +'%Y-%m-%d')
           bodyFile: ./artifacts/CHANGELOG.md
           artifacts: './artifacts/*.json'
           token: ${{ secrets.GITHUB_TOKEN }}
-          allowUpdates: true
           draft: false
           prerelease: false
-          commit: ${{ github.sha }}
-          generateReleaseNotes: false
