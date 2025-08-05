@@ -193,25 +193,15 @@ jobs:
     if: success()
     runs-on: ubuntu-latest
     steps:
-      - name: Download artifacts
-        uses: actions/download-artifact@v4
-        with:
-          path: ./artifacts
-          pattern: '*'
-          merge-multiple: true
-
-      - name: Prepare release assets
-        run: |
-          mkdir -p ./artifacts
-          [ -f "./artifacts/CHANGELOG.md" ] || echo "No CHANGELOG available" > ./artifacts/CHANGELOG.md
-          [ -f "./artifacts/safety-report.json" ] || echo "{}" > ./artifacts/safety-report.json
-          [ -f "./artifacts/npm-audit.json" ] || echo "{}" > ./artifacts/npm-audit.json
+      - name: Get timestamp
+        id: timestamp
+        run: echo "RELEASE_DATE=$(date -u +'%Y%m%d-%H%M%S')" >> $GITHUB_ENV
 
       - name: Create GitHub Release
         uses: ncipollo/release-action@v1
         with:
-          tag: release-$(date +'%Y%m%d-%H%M%S')
-          name: Release $(date +'%Y-%m-%d')
+          tag: release-${{ env.RELEASE_DATE }}
+          name: Release ${{ env.RELEASE_DATE }}
           bodyFile: ./artifacts/CHANGELOG.md
           artifacts: './artifacts/*.json'
           token: ${{ secrets.GITHUB_TOKEN }}
