@@ -58,7 +58,7 @@ function LandingPage() {
           onClick={() => navigate('/eventlist')}
           className="px-5 py-3 rounded"
         >
-          Explore Events
+          Explore Event
         </Button>
       </div>
     </div>
