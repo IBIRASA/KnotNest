@@ -193,6 +193,12 @@ jobs:
     if: success()
     runs-on: ubuntu-latest
     steps:
+      - name: Get timestamp
+        id: timestamp
+        run: |
+          echo "RELEASE_DATE=$(date -u +'%Y%m%d-%H%M%S')" >> $GITHUB_ENV
+          echo "RELEASE_NAME=$(date -u +'%Y-%m-%d %H:%M')" >> $GITHUB_ENV
+
       - name: Download all artifacts
         uses: actions/download-artifact@v4
         with:
@@ -203,21 +209,17 @@ jobs:
       - name: Verify artifacts exist
         run: |
           mkdir -p ./release-artifacts
-          # Create empty files if they don't exist
           [ -f "./release-artifacts/CHANGELOG.md" ] || echo "## Release Notes\nNo changelog available" > ./release-artifacts/CHANGELOG.md
           [ -f "./release-artifacts/safety-report.json" ] || echo "{}" > ./release-artifacts/safety-report.json
           [ -f "./release-artifacts/npm-audit.json" ] || echo "{}" > ./release-artifacts/npm-audit.json
-          
-          echo "Artifacts contents:"
-          ls -la ./release-artifacts/
-          echo "CHANGELOG content:"
-          cat ./release-artifacts/CHANGELOG.md
 
       - name: Create GitHub Release
         uses: ncipollo/release-action@v1
         with:
-          tag: release-$(date -u +'%Y%m%d-%H%M%S')
-          name: Release $(date -u +'%Y-%m-%d %H:%M')
+          tag: release-${{ env.RELEASE_DATE }}
+          name: Release ${{ env.RELEASE_NAME }}
           bodyFile: ./release-artifacts/CHANGELOG.md
           artifacts: './release-artifacts/*.json'
           token: ${{ secrets.GITHUB_TOKEN }}
+          draft: false
+          prerelease: false
