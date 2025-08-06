@@ -1,7 +1,9 @@
+# events/serializers.py
+
 from rest_framework import serializers
-from .models import Event
+from .models import Event # Import the Event model
 
 class EventSerializer(serializers.ModelSerializer):
     class Meta:
         model = Event
-        fields = ['title', 'description', 'location', 'date', 'is_available']
+        fields = ['id', 'title', 'description', 'location', 'date', 'is_available'] # 

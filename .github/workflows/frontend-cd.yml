@@ -1,0 +1,88 @@
+
+name: Monorepo Frontend CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - develop # Run CI (build, test, scan) on pushes to develop
+      - main # Run CD (build, push, deploy) on pushes to main
+    paths:
+      - 'vow-venue-frontend/**' # Only trigger if changes are in the frontend directory
+
+  pull_request:
+    branches:
+      - main # Run CI (build, test, scan) for PRs targeting main
+    paths:
+      - 'vow-venue-frontend/**' # Only trigger if changes are in the frontend directory
+
+env:
+  # Environment variables for the workflow
+  AZURE_CONTAINER_REGISTRY: knotcontaineracr123.azurecr.io
+  AZURE_CONTAINER_APP_NAME: knot-frontend
+  AZURE_RESOURCE_GROUP: <YOUR_RESOURCE_GROUP_NAME> # Replace with your Azure Resource Group name
+  REACT_APP_API_BASE_URL: https://knot-backend--knotnest.ashysea-fcb2b410.eastus.azurecontainerapps.io # Replace with your actual deployed backend URL
+
+jobs:
+  build-test-scan-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: vow-venue-frontend/package-lock.json
+
+      - name: Install Frontend Dependencies
+        working-directory: ./vow-venue-frontend
+        run: npm ci
+
+      - name: Run Frontend Tests
+        working-directory: ./vow-venue-frontend
+        run: npm test -- --watchAll=false
+        # IMPORTANT: For production-grade CD, remove 'continue-on-error: true'
+        # to ensure tests must pass for the pipeline to succeed.
+
+      - name: Build Frontend Application
+        working-directory: ./vow-venue-frontend
+        run: npm run build
+
+      - name: Security Scan (Frontend - npm audit)
+        working-directory: ./vow-venue-frontend
+        run: npm audit --audit-level=high
+        continue-on-error: true # Allow deployment to proceed even if only warnings are found, but review these!
+
+      # --- Deployment Steps (Conditional for 'main' branch only) ---
+      - name: Log in to Azure Container Registry
+        if: github.ref == 'refs/heads/main' # Only run if the branch is 'main'
+        uses: azure/docker-login@v1
+        with:
+          login-server: ${{ env.AZURE_CONTAINER_REGISTRY }}
+          username: ${{ secrets.ACR_LOGIN_SERVER }}
+          password: ${{ secrets.ACR_LOGIN_SERVER }}
+
+      - name: Build and Push Docker Image (Frontend)
+        if: github.ref == 'refs/heads/main' # Only run if the branch is 'main'
+        working-directory: ./vow-venue-frontend
+        run: |
+          docker build -t ${{ env.AZURE_CONTAINER_REGISTRY }}/knotnest_frontend:latest .
+          docker push ${{ env.AZURE_CONTAINER_REGISTRY }}/knotnest_frontend:latest
+
+      - name: Log in to Azure
+        if: github.ref == 'refs/heads/main' # Only run if the branch is 'main'
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Deploy to Azure Container App (Frontend)
+        if: github.ref == 'refs/heads/main' # Only run if the branch is 'main'
+        uses: azure/container-apps-deploy-action@v1
+        with:
+          appSourcePath: ./vow-venue-frontend
+          containerAppName: ${{ env.AZURE_CONTAINER_APP_NAME }}
+          resourceGroup: ${{ env.AZURE_RESOURCE_GROUP }}
+          imageToDeploy: ${{ env.AZURE_CONTAINER_REGISTRY }}/knotnest_frontend:latest
