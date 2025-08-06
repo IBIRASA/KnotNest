@@ -34,7 +34,6 @@ const EventList = () => {
     try {
       setLoading(true);
       setError(null);
-
       // --- IMPORTANT: Replace this with your actual Django backend API endpoint ---
       // This URL should match the path you set in vowvenue_backend/urls.py
       // For example: 'http://localhost:8000/api/venues/'
