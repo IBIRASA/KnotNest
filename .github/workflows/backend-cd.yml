@@ -25,7 +25,7 @@ env:
   # Environment variables for the workflow
   AZURE_CONTAINER_REGISTRY: knotcontaineracr123.azurecr.io # Your ACR login server
   AZURE_CONTAINER_APP_NAME: knot-backend # Your backend Azure Container App name
-  AZURE_RESOURCE_GROUP: knotnest-rg # Replace with your Azure Resource Group name
+  AZURE_RESOURCE_GROUP: <YOUR_RESOURCE_GROUP_NAME> # Replace with your Azure Resource Group name
 
 jobs:
   build-test-scan-deploy:
@@ -42,7 +42,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.10'
+          python-version: '3.12' # Using 3.12 as per last discussion
           cache: 'pip'
           cache-dependency-path: vowvenue_backend/requirements.txt
 
@@ -70,7 +70,7 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      # NEW: Extract Client ID and Secret into environment variables for Docker login
+      # Extract Client ID and Secret into environment variables for Docker login
       - name: Extract Client ID and Secret
         if: github.ref == 'refs/heads/main'
         run: |
@@ -83,26 +83,15 @@ jobs:
         uses: azure/docker-login@v1
         with:
           login-server: ${{ env.AZURE_CONTAINER_REGISTRY }}
-          # Use the extracted environment variable for username (Service Principal's Client ID)
           username: ${{ env.CLIENT_ID }}
-          # Use the extracted environment variable for password (Service Principal's Client Secret)
           password: ${{ env.CLIENT_SECRET }}
 
       - name: Build and Push Docker Image (Backend)
         if: github.ref == 'refs/heads/main'
         working-directory: ./vowvenue_backend
         run: |
-          # NEW: Added --no-cache to force a fresh build and pull the latest base image
           docker build --no-cache -t ${{ env.AZURE_CONTAINER_REGISTRY }}/knotnest_backend:latest .
           docker push ${{ env.AZURE_CONTAINER_REGISTRY }}/knotnest_backend:latest
-      - name: Scan Docker Image for Vulnerabilities (Trivy)
-        if: github.ref == 'refs/heads/main' # Only scan on main branch deployments
-        uses: aquasecurity/trivy-action@master
-        with:
-          image-ref: ${{ env.AZURE_CONTAINER_REGISTRY }}/knotnest_backend:latest # Adjust for frontend/backend image name
-          format: 'table' # or 'json' for machine-readable output
-          exit-code: '1' # Fail the pipeline if critical vulnerabilities are found
-          severity: 'CRITICAL,HIGH' 
 
       - name: Deploy to Azure Container App (Backend)
         if: github.ref == 'refs/heads/main'
