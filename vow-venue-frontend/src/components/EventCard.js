@@ -137,7 +137,7 @@ const EventCard = ({
   );
 };
 
-
+// Define PropTypes for the updated EventCard
 EventCard.propTypes = {
   event: PropTypes.shape({
     id: PropTypes.number.isRequired,

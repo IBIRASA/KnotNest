@@ -138,7 +138,6 @@ const EventList = () => {
       </Pagination.Item>
     );
   }
-
   // Loading state
   if (loading) {
     return (
