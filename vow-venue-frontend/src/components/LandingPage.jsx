@@ -43,7 +43,6 @@ function LandingPage() {
           </Button>
         </Container>
       </section>
-
       {/* Features Section */}
       <section className="py-5 bg-light">
         <Container>
