@@ -252,5 +252,5 @@ npm test
 ### Production Environment
 
 - **Frontend**: https://knot-frontend.ashysea-fcb2b410.eastus.azurecontainerapps.io
-- **Backend API**: https://knot-backend.ashysea-fcb2b410.eastus.azurecontainerapps.io
+- **Backend**: https://knot-backend.ashysea-fcb2b410.eastus.azurecontainerapps.io
 - **video link** : https://youtu.be/vrHrOslYqqs
