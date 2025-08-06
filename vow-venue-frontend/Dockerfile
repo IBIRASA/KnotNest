@@ -1,7 +1,6 @@
 # Use a minimal Node.js image based on Debian Bookworm (Debian 12) for building
 FROM node:20-slim-bookworm AS build
 
-# Set the working directory in the container
 WORKDIR /app
 
 # Copy package.json and package-lock.json first to leverage Docker cache
