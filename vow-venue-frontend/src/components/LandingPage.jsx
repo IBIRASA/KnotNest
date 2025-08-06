@@ -4,7 +4,6 @@ import { Button, Container, Row, Col } from 'react-bootstrap';
 import { FaHeart, FaCalendarAlt, FaSearch, FaUsers } from 'react-icons/fa';
 function LandingPage() {
   const navigate = useNavigate();
-
   return (
     <div className="landing-page">
       {/* Hero Section */}
