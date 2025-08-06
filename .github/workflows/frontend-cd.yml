@@ -23,7 +23,7 @@ env:
   AZURE_CONTAINER_REGISTRY: knotcontaineracr123.azurecr.io # Your ACR login server
   AZURE_CONTAINER_APP_NAME: knot-frontend # Your frontend Azure Container App name
   AZURE_RESOURCE_GROUP: knotnest-rg # Replace with your Azure Resource Group name
-  REACT_APP_API_BASE_URL: https://knot-backend--knotnest.ashysea-fcb2b410.eastus.azurecontainerapps.io # Replace with your actual deployed backend URL
+  REACT_APP_API_BASE_URL: https://knot-backend.ashysea-fcb2b410.eastus.azurecontainerapps.io
 
 jobs:
   build-test-scan-deploy:
