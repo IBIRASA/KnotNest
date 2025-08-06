@@ -1,5 +1,4 @@
-# Changelog
-
+Changelog
 All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
@@ -9,100 +8,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Complete continuous deployment pipeline with staging and production environments
-- Comprehensive security scanning (dependency, static analysis, container vulnerabilities)
-- Professional monitoring stack with Prometheus, Grafana, and AlertManager
-- Automated version tagging and conventional commit integration
-- Multi-environment deployment strategy (staging/production)
-- Container security scanning with Trivy
-- Automated changelog generation in CI/CD pipeline
-- Health checks and post-deployment verification
-
-### Enhanced
-
-- CI/CD pipeline now includes proper job separation and dependencies
-- Security reporting with artifact storage
-- Docker image building with version tagging
-- Azure Container Apps deployment automation
-- Comprehensive documentation and setup guides
-
-### Security
-
-- Automated dependency vulnerability scanning with npm audit and safety
-- Static code analysis with bandit for Python security
-- Container image security assessment before deployment
-- Security scan reports archived as CI/CD artifacts
-
-## [v1.1.0] - 2025-01-15
-
-### Added
-
-- Continuous deployment pipeline with automated testing and deployment on merge to main branch
-- Prometheus monitoring with Grafana dashboards for real-time metrics
-- Alerting setup for CPU usage thresholds via Grafana alerts
-- Automated deployment to Azure Container Apps on push to `main`
-- Docker-based monitoring stack with Prometheus, Grafana, and cAdvisor
-- Alert rules for system monitoring (CPU, memory, disk, services)
+- Initial setup for backend and frontend CI/CD pipelines.
+- Integrated npm audit for frontend dependency scanning.
+- Integrated Bandit for backend static code analysis.
+- Added manual workflow dispatch triggers.
+- Configured CORS for frontend-backend communication.
+- Implemented basic console logging for backend application.
+- Created Azure Monitor Dashboard for application health.
+- Established `SECURITY.md` for DevSecOps documentation.
 
 ### Fixed
 
-- Resolved Docker port conflict issues for Grafana container deployment
-- Updated deployment script to use Azure Container Apps instead of VM
-- Fixed database connection issues in CI pipeline
-- Improved Docker image building and registry management
-
-### Security
-
-- Integrated automated dependency vulnerability scanning during CI pipeline
-- Container image security scanning before pushing to registry
-- Enhanced security reporting and artifact storage
-
-### Changed
-
-- Updated backend metrics endpoint for Prometheus scraping
-- Improved monitoring configuration with proper volume management
-- Enhanced Docker Compose setup for production readiness
-
-## [v1.0.1] - 2025-01-10
-
-### Added
-
-- Monitoring with Prometheus and Grafana
-- Alert rule for Prometheus uptime notifications
-- Basic container monitoring with cAdvisor
+- Resolved Docker login authentication issues with ACR.
+- Corrected YAML parsing errors in workflow files.
+- Fixed frontend build error (prettier/prettier newline).
+- Ensured backend Container App scales to minimum 1 replica.
+- Corrected backend deployment action to include acrName.
+- Corrected Dockerfile RUN command syntax for both frontend and backend.
+- Updated frontend `Eventslist.js` to use `REACT_APP_API_BASE_URL`.
+- Applied OS security patches in backend Dockerfile (`apt-get upgrade`).
+- Applied OS security patches in frontend Dockerfile (`apk upgrade`).
+- Used valid `node:20-slim` base image for frontend Dockerfile.
 
 ### Changed
 
-- Updated backend metrics endpoint for Prometheus scraping
+- Updated `REACT_APP_API_BASE_URL` to point to Azure backend.
+- Upgraded backend Dockerfile to use `python:3.12-slim-bookworm` base image.
+- Switched frontend Dockerfile to multi-stage build with `nginx:alpine`.
+- Removed Trivy container image scanning from pipelines and documentation.
 
-### Fixed
-
-- Resolved Docker port conflicts for Grafana and Prometheus containers
-
-## [v1.0.0] - 2025-01-01
+## [0.1.0] - 2025-08-06
 
 ### Added
 
-- Initial release with backend (Django) and frontend (React) applications
-- Dockerized microservices architecture
-- Basic CI pipeline with GitHub Actions
-- Infrastructure as Code with Terraform
-- Azure Container Apps deployment
-- PostgreSQL database integration
-- RESTful API with Django REST Framework
-- Responsive React frontend with modern UI
-- Basic authentication and venue search functionality
-
-### Infrastructure
-
-- Azure Resource Group setup
-- Azure Container Registry integration
-- Container Apps environment configuration
-- Automated infrastructure provisioning
-
-### Documentation
-
-- Comprehensive README with setup instructions
-- API documentation and development guides
-- Deployment and infrastructure documentation
-  git commit -m "chore: update changelog for v${{ needs.build-and-push-images.outputs.version }}" || echo "No changes to commit"
+- Initial project setup.
+- Basic Django backend and React frontend.
+- Initial CI/CD workflow files.
