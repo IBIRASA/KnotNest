@@ -187,10 +187,7 @@ The CI/CD pipeline is implemented using GitHub Actions and includes:
 - **Frontend**: https://knot-frontend-staging.ashysea-fcb2b410.eastus.azurecontainerapps.io
 - **Backend API**: https://knot-backend-staging.ashysea-fcb2b410.eastus.azurecontainerapps.io
 
-### Monitoring URLs (Development)
-- **Grafana Dashboard**: http://localhost:3000
-- **Prometheus Metrics**: http://localhost:9090
-- **AlertManager**: http://localhost:9093
+
 
 ## Release Management
 
@@ -287,5 +284,4 @@ For issues and support:
 3. Verify monitoring dashboards for system health
 4. Contact development team via repository issues
 
-## License
-This project is licensed under the MIT License - see the [LICENSE](./LICENSE) file for details.
+
