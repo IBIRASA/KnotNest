@@ -13,12 +13,12 @@ ENV PYTHONUNBUFFERED 1
 # Use --no-install-recommends to avoid installing unnecessary packages
 # IMPORTANT: Run apt-get update AND apt-get upgrade to apply security patches to OS packages
 # Clean up apt cache to keep image size small
-RUN apt-get update \
-    && apt-get upgrade -y \  # NEW: Upgrade existing packages to their latest patched versions
-    && apt-get install -y --no-install-recommends \
+RUN apt-get update && \
+    apt-get upgrade -y && \
+    apt-get install -y --no-install-recommends \
         build-essential \
-        libpq-dev \
-    && rm -rf /var/lib/apt/lists/*
+        libpq-dev && \
+    rm -rf /var/lib/apt/lists/*
 
 # Upgrade pip and setuptools to their latest versions to address known vulnerabilities
 # This should help with the setuptools vulnerabilities identified by Trivy
