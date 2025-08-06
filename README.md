@@ -7,10 +7,8 @@ KnotNest is a comprehensive web application built with Django (backend) and Reac
 ## Features
 
 - **Venue Discovery**: Search and filter wedding venues by location, budget, and amenities
-- **Budget Planning**: Interactive budget calculator and planning tools
 - **Responsive Design**: Mobile-first, responsive UI for all devices
 - **Real-time Search**: Fast, dynamic venue search with filtering capabilities
-- **User Authentication**: Secure user registration and authentication system
 
 ## Architecture
 
@@ -21,7 +19,6 @@ KnotNest is a comprehensive web application built with Django (backend) and Reac
 - **Database**: PostgreSQL (production) / SQLite (development)
 - **Containerization**: Docker and Docker Compose
 - **Infrastructure**: Azure Container Apps
-- **Monitoring**: Prometheus, Grafana, AlertManager
 - **CI/CD**: GitHub Actions with automated testing and deployment
 
 ### Project Structure
@@ -100,29 +97,16 @@ npm start
 
 The application includes comprehensive monitoring using:
 
-- **Prometheus**: Metrics collection and alerting
-- **Grafana**: Visualization dashboards
-- **AlertManager**: Alert routing and notifications
-- **cAdvisor**: Container metrics
-- **Node Exporter**: System metrics
+- **azure monitor workbooks**: For creating rich, interactive visualization dashboards that display application metrics and health.
+- **azure container apps built-in Metrics**: Leveraging the native metrics collected by Azure for container performance (CPU, Memory, Requests, Errors, Replicas).
+- **Application logging**: Comprehensive application logs are configured to stream to Azure Log Analytics for detailed analysis and troubleshooting.
 
 ### Starting Monitoring Stack
 
-```bash
+````bash
 cd monitoring
 docker-compose up -d
 
-
-
-### Configured Alerts
-
-- High CPU usage (>80% for 5 minutes)
-- High memory usage (>85% for 5 minutes)
-- Disk space low (>90% for 10 minutes)
-- Service downtime (>1 minute)
-- High response time (>2 seconds)
-- High error rate (>10%)
-- Container restart frequency
 
 ## Infrastructure Deployment
 
@@ -139,7 +123,7 @@ terraform plan
 
 # Apply infrastructure
 terraform apply
-```
+````
 
 ### Infrastructure Components
 
@@ -196,11 +180,6 @@ The CI/CD pipeline is implemented using GitHub Actions and includes:
 - **Backend API**: https://knot-backend.ashysea-fcb2b410.eastus.azurecontainerapps.io
 
 ## Release Management
-
-### Version Strategy
-
-- **Production**: `YYYYMMDD-{git-sha}` (e.g., `20241215-abc1234`)
-- **Staging**: `staging-YYYYMMDD-{git-sha}` (e.g., `staging-20241215-abc1234`)
 
 ### Conventional Commits
 
