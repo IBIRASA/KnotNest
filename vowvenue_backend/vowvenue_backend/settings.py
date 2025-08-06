@@ -26,12 +26,7 @@ SECRET_KEY = 'django-insecure--c(#48oj^djg*bc&@i2kjr^6fabhe)yn1=_ipaf@_y8i5*_s=r
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = [
-    'localhost',
-    '127.0.0.1',
-    'knot-backend.ashysea-fcb2b410.eastus.azurecontainerapps.io', 
-    '0.0.0.0'
-]
+ALLOWED_HOSTS = ['*']
 
 
 # Application definition
@@ -50,6 +45,7 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',
     'django_prometheus.middleware.PrometheusBeforeMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -59,7 +55,6 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'corsheaders.middleware.CorsMiddleware',
     'django_prometheus.middleware.PrometheusAfterMiddleware',
 ]
 

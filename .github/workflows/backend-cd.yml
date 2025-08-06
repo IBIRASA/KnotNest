@@ -1,0 +1,88 @@
+# .github/workflows/backend-cd.yml
+# This workflow automates the Continuous Deployment for the KnotNest Backend
+# within a monorepo structure, supporting develop/main branching.
+
+name: Monorepo Backend CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - develop # Run CI (build, test, scan) on pushes to develop
+      - main    # Run CD (build, push, deploy) on pushes to main
+    paths:
+      - 'vowvenue_backend/**' # Only trigger if changes are in the backend directory
+
+  pull_request:
+    branches:
+      - main    # Run CI (build, test, scan) for PRs targeting main
+    paths:
+      - 'vowvenue_backend/**' # Only trigger if changes are in the backend directory
+
+env:
+  # Environment variables for the workflow
+  AZURE_CONTAINER_REGISTRY: knotcontaineracr123.azurecr.io
+  AZURE_CONTAINER_APP_NAME: knot-backend
+  AZURE_RESOURCE_GROUP: <YOUR_RESOURCE_GROUP_NAME> # Replace with your Azure Resource Group name
+
+jobs:
+  build-test-scan-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+          cache: 'pip'
+          cache-dependency-path: vowvenue_backend/requirements.txt
+
+      - name: Install Backend Dependencies
+        working-directory: ./vowvenue_backend
+        run: pip install -r requirements.txt
+
+      - name: Run Backend Tests
+        working-directory: ./vowvenue_backend
+        run: python manage.py test
+        # IMPORTANT: For production-grade CD, remove 'continue-on-error: true'
+        # to ensure tests must pass for the pipeline to succeed.
+
+      - name: Security Scan (Backend - Bandit)
+        working-directory: ./vowvenue_backend
+        run: |
+          pip install bandit
+          bandit -r . -ll -f json -o bandit_report.json || true
+        continue-on-error: true # Allow deployment to proceed even if only warnings are found, but review these!
+
+      # --- Deployment Steps (Conditional for 'main' branch only) ---
+      - name: Log in to Azure Container Registry
+        if: github.ref == 'refs/heads/main' # Only run if the branch is 'main'
+        uses: azure/docker-login@v1
+        with:
+          login-server: ${{ env.AZURE_CONTAINER_REGISTRY }}
+          username: ${{ secrets.ACR_LOGIN_SERVER }}
+          password: ${{ secrets.ACR_LOGIN_SERVER }}
+
+      - name: Build and Push Docker Image (Backend)
+        if: github.ref == 'refs/heads/main' # Only run if the branch is 'main'
+        working-directory: ./vowvenue_backend
+        run: |
+          docker build -t ${{ env.AZURE_CONTAINER_REGISTRY }}/knotnest_backend:latest .
+          docker push ${{ env.AZURE_CONTAINER_REGISTRY }}/knotnest_backend:latest
+
+      - name: Log in to Azure
+        if: github.ref == 'refs/heads/main' # Only run if the branch is 'main'
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Deploy to Azure Container App (Backend)
+        if: github.ref == 'refs/heads/main' # Only run if the branch is 'main'
+        uses: azure/container-apps-deploy-action@v1
+        with:
+          appSourcePath: ./vowvenue_backend
+          containerAppName: ${{ env.AZURE_CONTAINER_APP_NAME }}
+          resourceGroup: ${{ env.AZURE_RESOURCE_GROUP }}
+          imageToDeploy: ${{ env.AZURE_CONTAINER_REGISTRY }}/knotnest_backend:latest

@@ -2,13 +2,13 @@ version: '3.9'
 
 services:
   frontend:
-    image: ibirasa/vowvenue-frontend:latest
+    image: knotnest_frontend:latest
     ports:
       - '3001:80'
     depends_on:
       - backend
 
   backend:
-    image: ibirasa/vowvenue-backend:latest
+    image: knotnest_backend:latest
     ports:
       - '8001:8000'
