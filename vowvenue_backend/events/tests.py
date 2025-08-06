@@ -3,7 +3,7 @@
 from django.test import TestCase
 from django.urls import reverse
 from rest_framework.test import APIClient
-from .models import Event # Ensure this is relative import for the app's model
+from .models import Event # 
 
 class APITest(TestCase):
     def setUp(self):
