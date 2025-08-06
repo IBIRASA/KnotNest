@@ -1,6 +1,6 @@
 # Use a minimal Python image based on Debian Bookworm (Debian 12)
 # 'slim' images are smaller and have fewer pre-installed packages, reducing attack surface.
-FROM python:3.11-slim-bookworm
+FROM python:3.12-slim-bookworm
 
 # Set the working directory in the container
 WORKDIR /app
