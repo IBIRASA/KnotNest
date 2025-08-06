@@ -112,11 +112,7 @@ The application includes comprehensive monitoring using:
 cd monitoring
 docker-compose up -d
 
-# Access monitoring services:
-# Grafana: http://localhost:3000 (admin/admin123)
-# Prometheus: http://localhost:9090
-# AlertManager: http://localhost:9093
-```
+
 
 ### Configured Alerts
 

@@ -69,7 +69,31 @@ jobs:
         uses: azure/login@v1
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
+      - name: Setup Terraform
+        if: github.ref == 'refs/heads/main'
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.8.5
 
+      - name: Terraform Init
+        if: github.ref == 'refs/heads/main'
+        working-directory: ./infrastructure # Adjust this if your TF code is in a different folder
+        run: terraform init
+
+      - name: Terraform Validate
+        if: github.ref == 'refs/heads/main'
+        working-directory: ./infrastructure
+        run: terraform validate
+
+      - name: Terraform Plan
+        if: github.ref == 'refs/heads/main'
+        working-directory: ./infrastructure
+        run: terraform plan
+
+      - name: Terraform Apply
+        if: github.ref == 'refs/heads/main'
+        working-directory: ./infrastructure
+        run: terraform apply -auto-approve
       # Extract Client ID and Secret into environment variables for Docker login
       - name: Extract Client ID and Secret
         if: github.ref == 'refs/heads/main'
