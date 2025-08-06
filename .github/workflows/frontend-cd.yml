@@ -1,3 +1,6 @@
+# .github/workflows/frontend-cd.yml
+# This workflow automates the Continuous Deployment for the KnotNest Frontend
+# within a monorepo structure, supporting develop/main branching.
 
 name: Monorepo Frontend CI/CD Pipeline
 
@@ -63,22 +66,14 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      # New step to extract clientSecret into an environment variable
-      - name: Extract Client Secret
-        if: github.ref == 'refs/heads/main'
-        id: get_client_secret
-        run: |
-          CLIENT_SECRET=$(echo '${{ secrets.AZURE_CREDENTIALS }}' | jq -r '.clientSecret')
-          echo "CLIENT_SECRET=$CLIENT_SECRET" >> $GITHUB_ENV
-        shell: bash # Ensure bash is used for jq and GITHUB_ENV
-
       - name: Log in to Azure Container Registry
         if: github.ref == 'refs/heads/main'
         uses: azure/docker-login@v1
         with:
           login-server: ${{ env.AZURE_CONTAINER_REGISTRY }}
-          username: ${{ secrets.ACR_LOGIN_SERVER }} # Typically the login server itself
-          password: ${{ env.CLIENT_SECRET }} # Use the extracted environment variable
+          username: ${{ secrets.AZURE_CREDENTIALS | fromJson | .clientId }} # Use client ID as username
+          password: ${{ secrets.AZURE_CREDENTIALS | fromJson | .clientSecret }} # Use client secret as password
+
 
       - name: Build and Push Docker Image (Frontend)
         if: github.ref == 'refs/heads/main'
