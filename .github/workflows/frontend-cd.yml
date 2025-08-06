@@ -66,13 +66,21 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
+      # NEW/MODIFIED: Extract Client ID and Secret into environment variables
+      - name: Extract Client ID and Secret
+        if: github.ref == 'refs/heads/main'
+        run: |
+          echo "CLIENT_ID=$(echo '${{ secrets.AZURE_CREDENTIALS }}' | jq -r '.clientId')" >> $GITHUB_ENV
+          echo "CLIENT_SECRET=$(echo '${{ secrets.AZURE_CREDENTIALS }}' | jq -r '.clientSecret')" >> $GITHUB_ENV
+        shell: bash
+
       - name: Log in to Azure Container Registry
         if: github.ref == 'refs/heads/main'
         uses: azure/docker-login@v1
         with:
           login-server: ${{ env.AZURE_CONTAINER_REGISTRY }}
-          username: ${{ secrets.AZURE_CREDENTIALS | fromJson | .clientId }} 
-          password: ${{ secrets.AZURE_CREDENTIALS | fromJson | .clientSecret }} 
+          username: ${{ env.CLIENT_ID }} # Use the extracted environment variable
+          password: ${{ env.CLIENT_SECRET }} # Use the extracted environment variable
 
 
       - name: Build and Push Docker Image (Frontend)
