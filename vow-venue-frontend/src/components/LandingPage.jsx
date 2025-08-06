@@ -6,7 +6,6 @@ function LandingPage() {
   const navigate = useNavigate();
   return (
     <div className="landing-page">
-     
       <section
         className="hero-section d-flex align-items-center justify-content-center"
         style={{
