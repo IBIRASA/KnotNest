@@ -103,3 +103,4 @@ jobs:
           containerAppName: ${{ env.AZURE_CONTAINER_APP_NAME }}
           resourceGroup: ${{ env.AZURE_RESOURCE_GROUP }}
           imageToDeploy: ${{ env.AZURE_CONTAINER_REGISTRY }}/knotnest_backend:latest
+          acrName: knotcontaineracr123
