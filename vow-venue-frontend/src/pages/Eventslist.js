@@ -326,4 +326,5 @@ const EventList = () => {
     </Container>
   );
 };
+
 export default EventList;
