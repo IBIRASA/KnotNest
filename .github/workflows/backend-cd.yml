@@ -1,20 +1,16 @@
-# .github/workflows/backend-cd.yml
-# This workflow automates the Continuous Deployment for the KnotNest Backend
-# within a monorepo structure, supporting develop/main branching.
-
 name: Monorepo Backend CI/CD Pipeline
 
 on:
   push:
     branches:
       - develop # Run CI (build, test, scan) on pushes to develop
-      - main    # Run CD (build, push, deploy) on pushes to main
+      - main # Run CD (build, push, deploy) on pushes to main
     paths:
       - 'vowvenue_backend/**' # Only trigger if changes are in the backend directory
 
   pull_request:
     branches:
-      - main    # Run CI (build, test, scan) for PRs targeting main
+      - main # Run CI (build, test, scan) for PRs targeting main
     paths:
       - 'vowvenue_backend/**' # Only trigger if changes are in the backend directory
 
