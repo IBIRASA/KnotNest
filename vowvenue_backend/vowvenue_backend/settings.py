@@ -127,54 +127,27 @@ TIME_ZONE = 'UTC'
 USE_I18N = True
 
 USE_TZ = True
+# vowvenue_backend/settings.py
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
-
-    'filters': {
-        'skip_404_errors': {
-            '()': 'django.utils.log.CallbackFilter',
-            'callback': lambda record: not (
-                record.levelname == 'ERROR' and
-                'Not Found' in record.getMessage()
-            ),
-        },
-    },
-
-    'formatters': {
-        'verbose': {
-            'format': '[{asctime}] {levelname} {name} {message}',
-            'style': '{',
-        },
-    },
-
     'handlers': {
         'console': {
             'class': 'logging.StreamHandler',
-            'formatter': 'verbose',
-            'filters': ['skip_404_errors'],  # skips 404 error logs to reduce noise
         },
     },
-
     'loggers': {
-        'django.server': {
-            'handlers': ['console'],
-            'level': 'ERROR',
-            'propagate': False,
-        },
         'django': {
             'handlers': ['console'],
-            'level': 'INFO',
-            'propagate': True,
+            'level': 'INFO', # Or DEBUG, WARNING, ERROR
+            'propagate': False,
         },
-        'events.views': {
-           'handlers': ['console'],
-           'level': 'INFO',
-           'propagate': False,
-},
-
+        'your_app_name': { # Replace 'your_app_name' with your Django app's name
+            'handlers': ['console'],
+            'level': 'INFO',
+            'propagate': False,
+        },
     },
-
     'root': {
         'handlers': ['console'],
         'level': 'INFO',
