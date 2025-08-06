@@ -1,18 +1,16 @@
-
-
 name: Monorepo Frontend CI/CD Pipeline
 
 on:
   push:
     branches:
-      - develop 
-      - main    #
+      - develop
+      - main #
     paths:
-      - 'vow-venue-frontend/**' 
+      - 'vow-venue-frontend/**'
 
   pull_request:
     branches:
-      - main   
+      - main
     paths:
       - 'vow-venue-frontend/**'
 
@@ -63,31 +61,7 @@ jobs:
         uses: azure/login@v1
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
-      - name: Setup Terraform
-        if: github.ref == 'refs/heads/main'
-        uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: 1.8.5
 
-      - name: Terraform Init
-        if: github.ref == 'refs/heads/main'
-        working-directory: ./infrastructure # adjust this path if needed
-        run: terraform init
-
-      - name: Terraform Validate
-        if: github.ref == 'refs/heads/main'
-        working-directory: ./infrastructure
-        run: terraform validate
-
-      - name: Terraform Plan
-        if: github.ref == 'refs/heads/main'
-        working-directory: ./infrastructure
-        run: terraform plan
-
-      - name: Terraform Apply
-        if: github.ref == 'refs/heads/main'
-        working-directory: ./infrastructure
-        run: terraform apply -auto-approve
       # Extract Client ID and Secret into environment variables
       - name: Extract Client ID and Secret
         if: github.ref == 'refs/heads/main'
