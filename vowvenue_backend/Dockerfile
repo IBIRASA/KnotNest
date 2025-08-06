@@ -9,10 +9,12 @@ WORKDIR /app
 ENV PYTHONDONTWRITEBYTECODE 1
 ENV PYTHONUNBUFFERED 1
 
-# Install system dependencies required for psycopg2-binary (if needed) and other tools
+# Install system dependencies required for psycopg2-binary and other tools
 # Use --no-install-recommends to avoid installing unnecessary packages
+# IMPORTANT: Run apt-get update AND apt-get upgrade to apply security patches to OS packages
 # Clean up apt cache to keep image size small
 RUN apt-get update \
+    && apt-get upgrade -y \  # NEW: Upgrade existing packages to their latest patched versions
     && apt-get install -y --no-install-recommends \
         build-essential \
         libpq-dev \
@@ -36,6 +38,5 @@ EXPOSE 8000
 
 # Command to run the Django application using Gunicorn (recommended for production)
 # Make sure you have gunicorn in your requirements.txt
-# If you don't have gunicorn, you can use: CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
-# Replace 'your_project_name' with the actual name of your Django project (the folder containing settings.py, urls.py)
+# Replace 'vowvenue_backend' with the actual name of your Django project (the folder containing settings.py, urls.py)
 CMD ["gunicorn", "--bind", "0.0.0.0:8000", "vowvenue_backend.wsgi:application"]
