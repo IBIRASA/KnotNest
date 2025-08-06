@@ -1,42 +1,22 @@
-# Use a minimal Python image based on Debian Bookworm (Debian 12)
-# 'slim' images are smaller and have fewer pre-installed packages, reducing attack surface.
-FROM python:3.12-slim-bookworm
+# Use official Python image
+FROM python:3.11
 
-# Set the working directory in the container
+# Set environment variables
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+
+# Set working directory
 WORKDIR /app
 
-# Set environment variables for Python
-ENV PYTHONDONTWRITEBYTECODE 1
-ENV PYTHONUNBUFFERED 1
+# Copy project files
+COPY . .
 
-# Install system dependencies required for psycopg2-binary and other tools
-# Use --no-install-recommends to avoid installing unnecessary packages
-# IMPORTANT: Run apt-get update AND apt-get upgrade to apply security patches to OS packages
-# Clean up apt cache to keep image size small
-RUN apt-get update && \
-    apt-get upgrade -y && \
-    apt-get install -y --no-install-recommends \
-        build-essential \
-        libpq-dev && \
-    rm -rf /var/lib/apt/lists/*
+# Install dependencies
+RUN pip install --upgrade pip
+RUN pip install -r requirements.txt
 
-# Upgrade pip and setuptools to their latest versions to address known vulnerabilities
-# This should help with the setuptools vulnerabilities identified by Trivy
-RUN pip install --upgrade pip setuptools
-
-# Copy the requirements file into the working directory
-COPY requirements.txt /app/
-
-# Install Python dependencies
-RUN pip install --no-cache-dir -r requirements.txt
-
-# Copy the rest of your application code into the working directory
-COPY . /app/
-
-# Expose the port your Django application runs on (default for Django is 8000)
+# Expose port 8000
 EXPOSE 8000
 
-# Command to run the Django application using Gunicorn (recommended for production)
-# Make sure you have gunicorn in your requirements.txt
-# Replace 'vowvenue_backend' with the actual name of your Django project (the folder containing settings.py, urls.py)
-CMD ["gunicorn", "--bind", "0.0.0.0:8000", "vowvenue_backend.wsgi:application"]
+# Run the development server
+CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
