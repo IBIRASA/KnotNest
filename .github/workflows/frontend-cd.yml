@@ -1,6 +1,3 @@
-# .github/workflows/frontend-cd.yml
-# This workflow automates the Continuous Deployment for the KnotNest Frontend
-# within a monorepo structure, supporting develop/main branching.
 
 name: Monorepo Frontend CI/CD Pipeline
 
