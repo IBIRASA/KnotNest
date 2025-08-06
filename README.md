@@ -6,7 +6,7 @@ KnotNest is a comprehensive web application built with Django (backend) and Reac
 
 ## Features
 
-- **Venue Discovery**: Search and filter wedding venues by location, budget, and amenities
+- **Venue Discovery**: Search and filter wedding venues by location
 - **Responsive Design**: Mobile-first, responsive UI for all devices
 - **Real-time Search**: Fast, dynamic venue search with filtering capabilities
 
@@ -16,7 +16,7 @@ KnotNest is a comprehensive web application built with Django (backend) and Reac
 
 - **Frontend**: React 18+ with modern JavaScript (ES6+)
 - **Backend**: Django 4+ with Django REST Framework
-- **Database**: PostgreSQL (production) / SQLite (development)
+- **Database**: PostgreSQL
 - **Containerization**: Docker and Docker Compose
 - **Infrastructure**: Azure Container Apps
 - **CI/CD**: GitHub Actions with automated testing and deployment
@@ -28,7 +28,7 @@ KnotNest/
 ├── vow-venue-frontend/          # React frontend application
 ├── vowvenue_backend/            # Django backend application
 ├── terraform/                   # Infrastructure as Code (Terraform)
-├── monitoring/                  # Monitoring stack (Prometheus, Grafana)
+├── monitoring/                  # Monitoring stack (Azure Workbook Monitor)
 ├── .github/workflows/           # CI/CD pipeline configuration
 ├── docker-compose.yml           # Local development setup
 └── CHANGELOG.md                 # Release history and changes
@@ -66,7 +66,7 @@ docker-compose up --build
 ```bash
 cd vowvenue_backend
 python -m venv env
-source env/bin/activate  # On Windows: env\Scripts\activate
+source env/bin/activate
 pip install -r requirements.txt
 pip install -r requirements_test.txt
 
@@ -88,7 +88,7 @@ npm install
 
 # Run development server
 npm start
-# Application will be available at http://localhost:3000
+
 ```
 
 ## Monitoring and Observability
@@ -100,15 +100,6 @@ The application includes comprehensive monitoring using:
 - **azure monitor workbooks**: For creating rich, interactive visualization dashboards that display application metrics and health.
 - **azure container apps built-in Metrics**: Leveraging the native metrics collected by Azure for container performance (CPU, Memory, Requests, Errors, Replicas).
 - **Application logging**: Comprehensive application logs are configured to stream to Azure Log Analytics for detailed analysis and troubleshooting.
-
-### Starting Monitoring Stack
-
-````bash
-cd monitoring
-docker-compose up -d
-
-
-## Infrastructure Deployment
 
 ### Terraform Deployment
 
@@ -123,7 +114,7 @@ terraform plan
 
 # Apply infrastructure
 terraform apply
-````
+```
 
 ### Infrastructure Components
 
@@ -171,13 +162,6 @@ The CI/CD pipeline is implemented using GitHub Actions and includes:
 - Container vulnerability assessment
 - Security report generation and archival
 - Non-blocking security checks with detailed reporting
-
-## Live URLs
-
-### Production Environment
-
-- **Frontend**: https://knot-frontend.ashysea-fcb2b410.eastus.azurecontainerapps.io
-- **Backend API**: https://knot-backend.ashysea-fcb2b410.eastus.azurecontainerapps.io
 
 ## Release Management
 
@@ -234,9 +218,6 @@ python manage.py test
 # Frontend tests
 cd vow-venue-frontend
 npm test
-
-# Run tests with coverage
-npm test -- --coverage
 ```
 
 ### Test Coverage
@@ -266,20 +247,10 @@ npm test -- --coverage
 - Automated testing in CI pipeline
 - Security scanning and vulnerability assessment
 
-## Troubleshooting
+## Live URLs
 
-### Common Issues
+### Production Environment
 
-1. **Container Port Conflicts**: Ensure ports 3000, 3001, 8000, 8001, 9090, 9093 are available
-2. **Database Connection**: Verify PostgreSQL service is running for production setup
-3. **Docker Build Issues**: Clear Docker cache with `docker system prune`
-4. **Permission Issues**: Ensure Docker daemon is running and user has proper permissions
-
-### Support
-
-For issues and support:
-
-1. Check existing GitHub issues
-2. Review application logs via `docker-compose logs`
-3. Verify monitoring dashboards for system health
-4. Contact development team via repository issues
+- **Frontend**: https://knot-frontend.ashysea-fcb2b410.eastus.azurecontainerapps.io
+- **Backend API**: https://knot-backend.ashysea-fcb2b410.eastus.azurecontainerapps.io
+- **video link** : https://youtu.be/vrHrOslYqqs
