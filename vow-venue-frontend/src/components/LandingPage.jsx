@@ -36,7 +36,7 @@ function LandingPage() {
             onClick={() => navigate('/eventlist')}
             className="px-5 py-3 rounded-pill fw-bold shadow-lg animate__animated animate__fadeInUp animate__delay-2s"
           >
-            Explore Events
+            Scroll to Explore Events
           </Button>
         </Container>
       </section>
