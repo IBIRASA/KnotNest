@@ -173,7 +173,7 @@ const EventList = () => {
         <Col md={8} lg={6}>
           <Form.Control
             type="text"
-            placeholder="Search events by title, location, or description..."
+            placeholder="Searc events"
             className="p-3 border rounded-pill shadow-sm"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
