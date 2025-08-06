@@ -27,23 +27,26 @@ const EventList = () => {
   const [selectedEvent, setSelectedEvent] = useState(null); // Changed to selectedEvent
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [showDeleteConfirmModal, setShowDeleteConfirmModal] = useState(false);
-  const [eventToDeleteId, setEventToDeleteId] = useState(null);
+  const [eventToDeleteId, setEventToDeleteId] = useState(null); 
 
+  // Get the API base URL from the environment variable
+  // This will be set by your GitHub Actions workflow during build
   const API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
 
+  // Simulate fetching data from a Django backend
   const fetchEvents = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
-
+      // --- CORRECTED: Use the environment variable for the backend API endpoint ---
       const response = await fetch(`${API_BASE_URL}/api/venues/`);
 
       if (!response.ok) {
         throw new Error('Failed to fetch events');
       }
       const data = await response.json();
-
-      setEvents(data.results);
+      // Django REST Framework pagination returns data in a 'results' key
+      setEvents(data.results); // Set the fetched data to state
       setLoading(false);
     } catch (err) {
       setError(
@@ -52,7 +55,7 @@ const EventList = () => {
       setLoading(false);
       console.error('Fetch error:', err);
     }
-  }, [API_BASE_URL]);
+  }, [API_BASE_URL]); // Add API_BASE_URL to dependency array
 
   useEffect(() => {
     fetchEvents();
@@ -92,6 +95,7 @@ const EventList = () => {
   // Handle edit action (placeholder)
   const handleEdit = (id) => {
     console.log('Edit event with ID:', id);
+    // You would typically navigate to an edit page or open an edit form here
   };
 
   // Handle delete action (opens confirmation modal)
@@ -115,6 +119,7 @@ const EventList = () => {
   // Handle add event (placeholder)
   const handleAddEvent = () => {
     console.log('Add new event');
+    // You would typically navigate to an add event page or open a form here
   };
 
   // Calculate total pages for pagination
@@ -245,8 +250,9 @@ const EventList = () => {
                 <i className="fas fa-map-marker-alt me-2 text-success"></i>
                 {selectedEvent.location}
               </p>
+              {/* Image is handled manually, so we'll use a placeholder or your heroimage.jpg */}
               <img
-                src="/heroimage.jpg" 
+                src="/heroimage.jpg" // Use your default image or a specific image for events
                 alt={selectedEvent.title}
                 className="img-fluid rounded mb-4"
                 style={{
