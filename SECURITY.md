@@ -1,110 +1,78 @@
-# Security Policy
+Security Policy and Vulnerability Management
+This document outlines the security scanning practices implemented in the KnotNest CI/CD pipeline and the procedures for reviewing and remediating identified vulnerabilities.
 
-## Vulnerability Management
+1. Automated Security Scanning Tools
+   Our CI/CD pipelines integrate automated security scans to identify potential vulnerabilities in dependencies, code, and container images.
 
-This project implements comprehensive security scanning across all components of the application stack.
+Dependency Vulnerability Scanning:
 
-### Automated Security Scanning
+Frontend (React): npm audit is used to identify known vulnerabilities in Node.js packages.
 
-- **Frontend Dependencies**: npm audit scanning for JavaScript/Node.js vulnerabilities
-- **Backend Dependencies**: Safety and Bandit scanning for Python security issues
-- **Container Images**: Trivy scanning for container vulnerabilities
-- These scans are integrated into our CI/CD pipeline and run on every push to `main` and `develop`
+Backend (Django): Bandit is used for static analysis to find common security issues in Python code.
 
-### Current Security Status
+Container Image Security Scanning:
 
-#### Backend Security Updates
+Frontend & Backend Images: (If implemented with Trivy) Trivy is used to scan container images for operating system packages and application dependencies vulnerabilities after they are built and pushed to Azure Container Registry (ACR).
 
-We maintain up-to-date versions of all backend dependencies:
+2. Review Process for Security Scan Results
+   Security scan results are reviewed regularly to ensure the ongoing security of the KnotNest application.
 
-- **Django**: Updated to 4.2.23 (latest LTS with security patches)
-- **Django REST Framework**: Updated to 3.15.2 (fixes CVE-2024-21520)
-- **Security Tools**: Regular scanning with Safety and Bandit
-- **Dependency Management**: Pinned versions for stability and security
+Pipeline Output Review:
 
-#### Frontend Vulnerabilities (Development Dependencies)
+On every successful merge to the main branch (which triggers full deployment), the output of npm audit (frontend) and Bandit (backend) in the GitHub Actions workflow logs must be reviewed.
 
-The current npm audit reports show vulnerabilities in the following development-only dependencies:
+For Bandit, a bandit_report.json artifact is generated and can be downloaded from the backend CI/CD pipeline run details for a more structured review.
 
-1. **nth-check** (High Severity)
-   - Location: `svgo` → `css-select` → `nth-check`
-   - Impact: Development build process only
-   - Mitigation: Not present in production builds
+(If Trivy is implemented) The Trivy scan results for container images will also appear directly in the GitHub Actions logs.
 
-2. **postcss** (Moderate Severity)  
-   - Location: `resolve-url-loader` → `postcss`
-   - Impact: Development build process only
-   - Mitigation: Not present in production builds
+Prioritization:
 
-3. **webpack-dev-server** (Moderate Severity)
-   - Impact: Development server only
-   - Mitigation: Not used in production deployments
+CRITICAL and HIGH severity vulnerabilities identified by any scan tool must be prioritized for immediate remediation.
 
-#### Why These Vulnerabilities Are Acceptable
+Medium and Low severity issues should be tracked and addressed in subsequent development cycles.
 
-1. **Development-Only Impact**: All identified vulnerabilities are in development dependencies that are not included in production builds
-2. **Build Process**: The `npm run build` command creates a production bundle that excludes these development dependencies
-3. **Production Security**: Production deployments use only the built static files, not the development toolchain
-4. **Risk Assessment**: The vulnerabilities affect local development environments, not production users
+3. Remediation Guidelines
+   Once vulnerabilities are identified, the following steps should be taken for remediation:
 
-### Production Security Measures
+Dependency Updates:
 
-✅ **Production Dependencies**: All production dependencies pass security audit  
-✅ **Container Security**: Docker images are scanned with Trivy before deployment  
-✅ **Backend Security**: Python dependencies are scanned with Safety and Bandit  
-✅ **Infrastructure Security**: Azure Container Apps provide built-in security features  
-✅ **HTTPS Enforcement**: All production traffic uses HTTPS encryption  
-✅ **Environment Isolation**: Development vulnerabilities are isolated from production  
+For npm audit findings, attempt to update the vulnerable packages to a version where the vulnerability is resolved. Use npm update or npm install <package>@<version> to specifically target updates.
 
-### Security Monitoring
+For Bandit findings, review the flagged code and refactor it to remove the security flaw, following secure coding best practices.
 
-Our CI/CD pipeline includes:
+For Python dependencies, update requirements.txt to newer, secure versions of libraries.
 
-- **Automated Security Scans**: Every code change triggers security scanning
-- **Security Reports**: Detailed vulnerability reports are generated and archived
-- **Production Monitoring**: Real-time monitoring of production applications
-- **Dependency Updates**: Regular monitoring for security updates
+Container Image Updates:
 
-### Reporting Security Issues
+If Trivy identifies vulnerabilities in the base image (e.g., python:3.10 or node:20), investigate if a newer, patched version of the base image is available. Update the FROM line in your Dockerfile accordingly.
 
-To report security vulnerabilities:
+If vulnerabilities are in application dependencies within the container, update them as per the "Dependency Updates" guidelines and rebuild the Docker image.
 
-1. **GitHub Issues**: For non-sensitive security improvements
-2. **Private Disclosure**: For critical security vulnerabilities, please contact the development team directly
-3. **CI/CD Integration**: Security scans run automatically and generate reports
+Code Fixes:
 
-### Security Best Practices
+For direct code vulnerabilities (e.g., from Bandit), implement the necessary code changes to eliminate the vulnerability.
 
-This project follows security best practices:
+Testing:
 
-- ✅ **Dependency Scanning**: Automated vulnerability detection
-- ✅ **Container Security**: Multi-layer container scanning
-- ✅ **Secrets Management**: Environment variables for sensitive configuration
-- ✅ **HTTPS Everywhere**: Encrypted communication in production
-- ✅ **Minimal Attack Surface**: Production builds exclude development dependencies
-- ✅ **Regular Updates**: Continuous monitoring for security updates
+After any security fix, ensure that existing automated tests (unit, integration) are run to prevent regressions.
 
-### Development vs Production Security
+Consider adding new tests specifically for the patched vulnerability if applicable.
 
-| Environment | Security Scope | Risk Level | Mitigation |
-|-------------|---------------|------------|------------|
-| **Development** | Full dependency tree | Low | Local environment only |
-| **Production** | Runtime dependencies only | Critical | Full security scanning |
+4. Reporting and Tracking
+   All identified vulnerabilities and their remediation status should be tracked (e.g., in GitHub Issues, if applicable) to ensure they are addressed.
 
-The development vulnerabilities identified by npm audit do not affect production security because:
+Significant security updates and fixes should be noted in the CHANGELOG.md file under the Fixed section.
 
-1. Development dependencies are excluded from production builds
-2. Production uses compiled/minified static assets
-3. Development tools never run in production environments
-4. Container deployments use production-optimized images
+3. Commit and Push 🚀
+   Save the SECURITY.md file in the root of your KnotNest repository.
 
-## Conclusion
+Commit this new file to your Git repository.
 
-While npm audit reports vulnerabilities in development dependencies, our production deployments remain secure through:
+cd ~/Music/KnotNest # Ensure you are in the monorepo root
+git add SECURITY.md
+git commit -m "docs: Add SECURITY.md for DevSecOps documentation"
+git push origin develop
 
-- **Build Process Isolation**: Development tools don't reach production
-- **Comprehensive Scanning**: Multi-layer security validation
-- **Production Monitoring**: Real-time security monitoring
-- **Best Practices**: Following industry security standards
+Once the CI pipeline passes on develop, merge to main to make this documentation live in your main branch.
 
-The identified vulnerabilities are acceptable for this application because they exist only in the development toolchain and do not affect production security or end-user safety.
+This SECURITY.md file will serve as your documentation for DevSecOps integration, covering how you handle security scan results and remediation.
