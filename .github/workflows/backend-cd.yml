@@ -18,6 +18,9 @@ on:
     paths:
       - 'vowvenue_backend/**' # Only trigger if changes are in the backend directory
 
+  # NEW: Allows manual triggering from GitHub Actions UI
+  workflow_dispatch:
+
 env:
   # Environment variables for the workflow
   AZURE_CONTAINER_REGISTRY: knotcontaineracr123.azurecr.io # Your ACR login server
@@ -29,6 +32,10 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # NEW: Enable debug logging for the workflow run
+      - name: Enable Debug Logging
+        run: echo "ACTIONS_STEP_DEBUG=true" >> $GITHUB_ENV
+
       - name: Checkout Repository
         uses: actions/checkout@v4
 
