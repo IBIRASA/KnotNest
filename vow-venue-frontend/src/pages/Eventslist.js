@@ -29,16 +29,17 @@ const EventList = () => {
   const [showDeleteConfirmModal, setShowDeleteConfirmModal] = useState(false);
   const [eventToDeleteId, setEventToDeleteId] = useState(null); // Changed to eventToDeleteId
 
+  // Get the API base URL from the environment variable
+  // This will be set by your GitHub Actions workflow during build
+  const API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
+
   // Simulate fetching data from a Django backend
   const fetchEvents = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
-      // --- IMPORTANT: Replace this with your actual Django backend API endpoint ---
-      // This URL should match the path you set in vowvenue_backend/urls.py
-      // For example: 'http://localhost:8000/api/venues/'
-      // If you are using process.env.REACT_APP_API_BASE_URL, ensure it's set correctly.
-      const response = await fetch(`http://localhost:8000/api/venues/`); // Example URL, adjust as needed
+      // --- CORRECTED: Use the environment variable for the backend API endpoint ---
+      const response = await fetch(`${API_BASE_URL}/api/venues/`);
 
       if (!response.ok) {
         throw new Error('Failed to fetch events');
@@ -54,7 +55,7 @@ const EventList = () => {
       setLoading(false);
       console.error('Fetch error:', err);
     }
-  }, []);
+  }, [API_BASE_URL]); // Add API_BASE_URL to dependency array
 
   useEffect(() => {
     fetchEvents();
