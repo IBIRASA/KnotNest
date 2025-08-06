@@ -1,3 +1,6 @@
+# .github/workflows/frontend-cd.yml
+# This workflow automates the Continuous Deployment for the KnotNest Frontend
+# within a monorepo structure, supporting develop/main branching.
 
 name: Monorepo Frontend CI/CD Pipeline
 
@@ -5,20 +8,20 @@ on:
   push:
     branches:
       - develop # Run CI (build, test, scan) on pushes to develop
-      - main # Run CD (build, push, deploy) on pushes to main
+      - main    # Run CD (build, push, deploy) on pushes to main
     paths:
       - 'vow-venue-frontend/**' # Only trigger if changes are in the frontend directory
 
   pull_request:
     branches:
-      - main # Run CI (build, test, scan) for PRs targeting main
+      - main    # Run CI (build, test, scan) for PRs targeting main
     paths:
       - 'vow-venue-frontend/**' # Only trigger if changes are in the frontend directory
 
 env:
   # Environment variables for the workflow
-  AZURE_CONTAINER_REGISTRY: knotcontaineracr123.azurecr.io
-  AZURE_CONTAINER_APP_NAME: knot-frontend
+  AZURE_CONTAINER_REGISTRY: knotcontaineracr123.azurecr.io # Your ACR login server
+  AZURE_CONTAINER_APP_NAME: knot-frontend # Your frontend Azure Container App name
   AZURE_RESOURCE_GROUP: <YOUR_RESOURCE_GROUP_NAME> # Replace with your Azure Resource Group name
   REACT_APP_API_BASE_URL: https://knot-backend--knotnest.ashysea-fcb2b410.eastus.azurecontainerapps.io # Replace with your actual deployed backend URL
 
@@ -57,29 +60,31 @@ jobs:
         continue-on-error: true # Allow deployment to proceed even if only warnings are found, but review these!
 
       # --- Deployment Steps (Conditional for 'main' branch only) ---
+      # This step MUST come BEFORE ACR login
+      - name: Log in to Azure
+        if: github.ref == 'refs/heads/main'
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
       - name: Log in to Azure Container Registry
-        if: github.ref == 'refs/heads/main' # Only run if the branch is 'main'
+        if: github.ref == 'refs/heads/main'
         uses: azure/docker-login@v1
         with:
           login-server: ${{ env.AZURE_CONTAINER_REGISTRY }}
-          username: ${{ secrets.ACR_LOGIN_SERVER }}
-          password: ${{ secrets.ACR_LOGIN_SERVER }}
+          # Removed username and password here.
+          # This action can now infer credentials from the Azure login context
+          # established by the previous 'Log in to Azure' step.
 
       - name: Build and Push Docker Image (Frontend)
-        if: github.ref == 'refs/heads/main' # Only run if the branch is 'main'
+        if: github.ref == 'refs/heads/main'
         working-directory: ./vow-venue-frontend
         run: |
           docker build -t ${{ env.AZURE_CONTAINER_REGISTRY }}/knotnest_frontend:latest .
           docker push ${{ env.AZURE_CONTAINER_REGISTRY }}/knotnest_frontend:latest
 
-      - name: Log in to Azure
-        if: github.ref == 'refs/heads/main' # Only run if the branch is 'main'
-        uses: azure/login@v1
-        with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
-
       - name: Deploy to Azure Container App (Frontend)
-        if: github.ref == 'refs/heads/main' # Only run if the branch is 'main'
+        if: github.ref == 'refs/heads/main'
         uses: azure/container-apps-deploy-action@v1
         with:
           appSourcePath: ./vow-venue-frontend

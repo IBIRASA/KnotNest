@@ -20,8 +20,8 @@ on:
 
 env:
   # Environment variables for the workflow
-  AZURE_CONTAINER_REGISTRY: knotcontaineracr123.azurecr.io
-  AZURE_CONTAINER_APP_NAME: knot-backend
+  AZURE_CONTAINER_REGISTRY: knotcontaineracr123.azurecr.io # Your ACR login server
+  AZURE_CONTAINER_APP_NAME: knot-backend # Your backend Azure Container App name
   AZURE_RESOURCE_GROUP: <YOUR_RESOURCE_GROUP_NAME> # Replace with your Azure Resource Group name
 
 jobs:
@@ -57,29 +57,31 @@ jobs:
         continue-on-error: true # Allow deployment to proceed even if only warnings are found, but review these!
 
       # --- Deployment Steps (Conditional for 'main' branch only) ---
+      # This step MUST come BEFORE ACR login
+      - name: Log in to Azure
+        if: github.ref == 'refs/heads/main'
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
       - name: Log in to Azure Container Registry
-        if: github.ref == 'refs/heads/main' # Only run if the branch is 'main'
+        if: github.ref == 'refs/heads/main'
         uses: azure/docker-login@v1
         with:
           login-server: ${{ env.AZURE_CONTAINER_REGISTRY }}
-          username: ${{ secrets.ACR_LOGIN_SERVER }}
-          password: ${{ secrets.ACR_LOGIN_SERVER }}
+          # Removed username and password here.
+          # This action can now infer credentials from the Azure login context
+          # established by the previous 'Log in to Azure' step.
 
       - name: Build and Push Docker Image (Backend)
-        if: github.ref == 'refs/heads/main' # Only run if the branch is 'main'
+        if: github.ref == 'refs/heads/main'
         working-directory: ./vowvenue_backend
         run: |
           docker build -t ${{ env.AZURE_CONTAINER_REGISTRY }}/knotnest_backend:latest .
           docker push ${{ env.AZURE_CONTAINER_REGISTRY }}/knotnest_backend:latest
 
-      - name: Log in to Azure
-        if: github.ref == 'refs/heads/main' # Only run if the branch is 'main'
-        uses: azure/login@v1
-        with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
-
       - name: Deploy to Azure Container App (Backend)
-        if: github.ref == 'refs/heads/main' # Only run if the branch is 'main'
+        if: github.ref == 'refs/heads/main'
         uses: azure/container-apps-deploy-action@v1
         with:
           appSourcePath: ./vowvenue_backend
