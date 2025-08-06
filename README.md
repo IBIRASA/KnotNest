@@ -15,6 +15,7 @@ KnotNest is a comprehensive web application built with Django (backend) and Reac
 ## Architecture
 
 ### Technology Stack
+
 - **Frontend**: React 18+ with modern JavaScript (ES6+)
 - **Backend**: Django 4+ with Django REST Framework
 - **Database**: PostgreSQL (production) / SQLite (development)
@@ -24,6 +25,7 @@ KnotNest is a comprehensive web application built with Django (backend) and Reac
 - **CI/CD**: GitHub Actions with automated testing and deployment
 
 ### Project Structure
+
 ```
 KnotNest/
 ├── vow-venue-frontend/          # React frontend application
@@ -38,6 +40,7 @@ KnotNest/
 ## Development Setup
 
 ### Prerequisites
+
 - [Docker](https://docs.docker.com/get-docker/) (v20.10+)
 - [Docker Compose](https://docs.docker.com/compose/install/) (v2.0+)
 - [Node.js](https://nodejs.org/) (v20+) - for local development
@@ -45,6 +48,7 @@ KnotNest/
 - [Git](https://git-scm.com/) for version control
 
 ### Quick Start with Docker
+
 ```bash
 # Clone the repository
 git clone https://github.com/IBIRASA/KnotNest.git
@@ -61,6 +65,7 @@ docker-compose up --build
 ### Local Development Setup
 
 #### Backend Setup
+
 ```bash
 cd vowvenue_backend
 python -m venv env
@@ -79,6 +84,7 @@ python manage.py runserver 8000
 ```
 
 #### Frontend Setup
+
 ```bash
 cd vow-venue-frontend
 npm install
@@ -91,7 +97,9 @@ npm start
 ## Monitoring and Observability
 
 ### Monitoring Stack
+
 The application includes comprehensive monitoring using:
+
 - **Prometheus**: Metrics collection and alerting
 - **Grafana**: Visualization dashboards
 - **AlertManager**: Alert routing and notifications
@@ -99,6 +107,7 @@ The application includes comprehensive monitoring using:
 - **Node Exporter**: System metrics
 
 ### Starting Monitoring Stack
+
 ```bash
 cd monitoring
 docker-compose up -d
@@ -110,6 +119,7 @@ docker-compose up -d
 ```
 
 ### Configured Alerts
+
 - High CPU usage (>80% for 5 minutes)
 - High memory usage (>85% for 5 minutes)
 - Disk space low (>90% for 10 minutes)
@@ -121,6 +131,7 @@ docker-compose up -d
 ## Infrastructure Deployment
 
 ### Terraform Deployment
+
 ```bash
 cd terraform
 
@@ -135,6 +146,7 @@ terraform apply
 ```
 
 ### Infrastructure Components
+
 - **Azure Resource Group**: `knotnest-rg`
 - **Azure Container Registry**: For storing Docker images
 - **Azure Container Apps Environment**: Managed container hosting
@@ -144,6 +156,7 @@ terraform apply
 ## Continuous Deployment Pipeline
 
 ### Pipeline Overview
+
 The CI/CD pipeline is implemented using GitHub Actions and includes:
 
 1. **Build and Test**:
@@ -167,11 +180,13 @@ The CI/CD pipeline is implemented using GitHub Actions and includes:
    - Zero-downtime deployment with health checks
 
 ### Pipeline Triggers
+
 - **Staging**: Pushes to `develop` branch
 - **Production**: Pushes to `main` branch
 - **Testing**: Pull requests to `main` branch
 
 ### Security Features
+
 - Automated dependency scanning
 - Container vulnerability assessment
 - Security report generation and archival
@@ -180,23 +195,21 @@ The CI/CD pipeline is implemented using GitHub Actions and includes:
 ## Live URLs
 
 ### Production Environment
+
 - **Frontend**: https://knot-frontend.ashysea-fcb2b410.eastus.azurecontainerapps.io
 - **Backend API**: https://knot-backend.ashysea-fcb2b410.eastus.azurecontainerapps.io
-
-### Staging Environment
-- **Frontend**: https://knot-frontend-staging.ashysea-fcb2b410.eastus.azurecontainerapps.io
-- **Backend API**: https://knot-backend-staging.ashysea-fcb2b410.eastus.azurecontainerapps.io
-
-
 
 ## Release Management
 
 ### Version Strategy
+
 - **Production**: `YYYYMMDD-{git-sha}` (e.g., `20241215-abc1234`)
 - **Staging**: `staging-YYYYMMDD-{git-sha}` (e.g., `staging-20241215-abc1234`)
 
 ### Conventional Commits
+
 The project follows conventional commit standards:
+
 - `feat:` New features
 - `fix:` Bug fixes
 - `docs:` Documentation changes
@@ -206,7 +219,9 @@ The project follows conventional commit standards:
 - `chore:` Maintenance tasks
 
 ### Changelog Management
+
 All releases are documented in [CHANGELOG.md](./CHANGELOG.md) with:
+
 - Version information and release dates
 - Added features and improvements
 - Bug fixes and security updates
@@ -215,6 +230,7 @@ All releases are documented in [CHANGELOG.md](./CHANGELOG.md) with:
 ## Security
 
 ### Security Practices
+
 - Automated dependency vulnerability scanning
 - Container image security analysis
 - Static code analysis for security issues
@@ -223,7 +239,9 @@ All releases are documented in [CHANGELOG.md](./CHANGELOG.md) with:
 - Security headers and CORS configuration
 
 ### Security Reporting
+
 Security scan results are automatically generated and stored as artifacts:
+
 - Frontend dependency audit reports
 - Backend safety and bandit reports
 - Container vulnerability assessments
@@ -232,6 +250,7 @@ Security scan results are automatically generated and stored as artifacts:
 ## Testing
 
 ### Running Tests
+
 ```bash
 # Backend tests
 cd vowvenue_backend
@@ -246,6 +265,7 @@ npm test -- --coverage
 ```
 
 ### Test Coverage
+
 - Backend: Django unit tests with database testing
 - Frontend: Jest and React Testing Library
 - Integration: End-to-end API testing
@@ -254,6 +274,7 @@ npm test -- --coverage
 ## Contributing
 
 ### Development Workflow
+
 1. Create feature branch from `develop`
 2. Implement changes with tests
 3. Run local testing and security checks
@@ -264,6 +285,7 @@ npm test -- --coverage
 8. Merge to `main` for production deployment
 
 ### Code Quality
+
 - ESLint and Prettier for frontend code formatting
 - Python Black and flake8 for backend code quality
 - Automated testing in CI pipeline
@@ -272,16 +294,17 @@ npm test -- --coverage
 ## Troubleshooting
 
 ### Common Issues
+
 1. **Container Port Conflicts**: Ensure ports 3000, 3001, 8000, 8001, 9090, 9093 are available
 2. **Database Connection**: Verify PostgreSQL service is running for production setup
 3. **Docker Build Issues**: Clear Docker cache with `docker system prune`
 4. **Permission Issues**: Ensure Docker daemon is running and user has proper permissions
 
 ### Support
+
 For issues and support:
+
 1. Check existing GitHub issues
 2. Review application logs via `docker-compose logs`
 3. Verify monitoring dashboards for system health
 4. Contact development team via repository issues
-
-
