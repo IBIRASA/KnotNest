@@ -94,6 +94,14 @@ jobs:
         run: |
           docker build -t ${{ env.AZURE_CONTAINER_REGISTRY }}/knotnest_backend:latest .
           docker push ${{ env.AZURE_CONTAINER_REGISTRY }}/knotnest_backend:latest
+      - name: Scan Docker Image for Vulnerabilities (Trivy)
+        if: github.ref == 'refs/heads/main' # Only scan on main branch deployments
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ env.AZURE_CONTAINER_REGISTRY }}/knotnest_backend:latest # Adjust for frontend/backend image name
+          format: 'table' # or 'json' for machine-readable output
+          exit-code: '1' # Fail the pipeline if critical vulnerabilities are found
+          severity: 'CRITICAL,HIGH' 
 
       - name: Deploy to Azure Container App (Backend)
         if: github.ref == 'refs/heads/main'
