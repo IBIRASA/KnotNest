@@ -87,7 +87,8 @@ jobs:
         if: github.ref == 'refs/heads/main'
         working-directory: ./vow-venue-frontend
         run: |
-          docker build -t ${{ env.AZURE_CONTAINER_REGISTRY }}/knotnest_frontend:latest .
+          # NEW: Added --no-cache to force a fresh build and pull the latest base image
+          docker build --no-cache -t ${{ env.AZURE_CONTAINER_REGISTRY }}/knotnest_frontend:latest .
           docker push ${{ env.AZURE_CONTAINER_REGISTRY }}/knotnest_frontend:latest
       - name: Scan Docker Image for Vulnerabilities (Trivy)
         if: github.ref == 'refs/heads/main' # Only scan on main branch deployments
