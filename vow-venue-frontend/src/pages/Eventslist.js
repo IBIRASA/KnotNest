@@ -22,12 +22,12 @@ const EventList = () => {
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
-  const [eventsPerPage] = useState(6); // Display 6 events per page
+  const [eventsPerPage] = useState(6);
   const [filteredEvents, setFilteredEvents] = useState([]);
   const [selectedEvent, setSelectedEvent] = useState(null); // Changed to selectedEvent
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [showDeleteConfirmModal, setShowDeleteConfirmModal] = useState(false);
-  const [eventToDeleteId, setEventToDeleteId] = useState(null); // Changed to eventToDeleteId
+  const [eventToDeleteId, setEventToDeleteId] = useState(null);
 
   // Get the API base URL from the environment variable
   // This will be set by your GitHub Actions workflow during build
