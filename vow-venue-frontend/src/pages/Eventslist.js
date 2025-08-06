@@ -9,13 +9,7 @@ import {
   Pagination,
   Modal
 } from 'react-bootstrap';
-import EventCard from '../components/EventCard'; // Corrected import path
-
-// IMPORTANT: Bootstrap CSS and Font Awesome icons are expected to be loaded via CDN in your public/index.html
-// If styling or icons are missing, add these lines to the <head> section of public/index.html:
-// <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" xintegrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
-// <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" xintegrity="sha512-Fo3rlrZj/k7ujTnHg4CGR2D7kSs0V4LLanw2qksYuRlEzO+tcaEPQogQ0KaoGN26/zrn20ImR1DfuLWnOo7aBA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
-
+import EventCard from '../components/EventCard'; //
 const EventList = () => {
   const [events, setEvents] = useState([]); // State for fetched events
   const [loading, setLoading] = useState(true);
@@ -24,13 +18,13 @@ const EventList = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [eventsPerPage] = useState(6);
   const [filteredEvents, setFilteredEvents] = useState([]);
-  const [selectedEvent, setSelectedEvent] = useState(null); // Changed to selectedEvent
+  const [selectedEvent, setSelectedEvent] = useState(null); //
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [showDeleteConfirmModal, setShowDeleteConfirmModal] = useState(false);
   const [eventToDeleteId, setEventToDeleteId] = useState(null);
 
-  // Get the API base URL from the environment variable
-  // This will be set by your GitHub Actions workflow during build
+  //
+  //
   const API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
 
   // Simulate fetching data from a Django backend
@@ -38,15 +32,15 @@ const EventList = () => {
     try {
       setLoading(true);
       setError(null);
-      // --- CORRECTED: Use the environment variable for the backend API endpoint ---
+      //
       const response = await fetch(`${API_BASE_URL}/api/venues/`);
 
       if (!response.ok) {
         throw new Error('Failed to fetch events');
       }
       const data = await response.json();
-      // Django REST Framework pagination returns data in a 'results' key
-      setEvents(data.results); // Set the fetched data to state
+      //
+      setEvents(data.results); //
       setLoading(false);
     } catch (err) {
       setError(
@@ -55,7 +49,7 @@ const EventList = () => {
       setLoading(false);
       console.error('Fetch error:', err);
     }
-  }, [API_BASE_URL]); // Add API_BASE_URL to dependency array
+  }, [API_BASE_URL]); //
 
   useEffect(() => {
     fetchEvents();
@@ -87,7 +81,7 @@ const EventList = () => {
 
   // Handle card click to show details modal
   const handleViewDetails = (event) => {
-    // Now accepts an event object
+    //
     setSelectedEvent(event);
     setShowDetailsModal(true);
   };
@@ -95,7 +89,7 @@ const EventList = () => {
   // Handle edit action (placeholder)
   const handleEdit = (id) => {
     console.log('Edit event with ID:', id);
-    // You would typically navigate to an edit page or open an edit form here
+    //
   };
 
   // Handle delete action (opens confirmation modal)
@@ -106,7 +100,7 @@ const EventList = () => {
 
   // Confirm delete action
   const confirmDelete = () => {
-    // In a real app, you would send a DELETE request to your Django API here
+    //
     console.log('Confirmed delete for event with ID:', eventToDeleteId);
     setEvents(events.filter((event) => event.id !== eventToDeleteId));
     setFilteredEvents(
@@ -119,7 +113,7 @@ const EventList = () => {
   // Handle add event (placeholder)
   const handleAddEvent = () => {
     console.log('Add new event');
-    // You would typically navigate to an add event page or open a form here
+    //
   };
 
   // Calculate total pages for pagination
@@ -183,7 +177,7 @@ const EventList = () => {
               transition:
                 'border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out',
               outline: 'none', // Remove default focus outline
-              '--bs-focus-ring-color': 'rgba(40, 167, 69, 0.25)' // Custom focus ring color
+              '--bs-focus-ring-color': 'rgba(40, 167, 69, 0.25)' //
             }}
           />
         </Col>
@@ -252,7 +246,7 @@ const EventList = () => {
               </p>
               {/* Image is handled manually, so we'll use a placeholder or your heroimage.jpg */}
               <img
-                src="/heroimage.jpg" // Use your default image or a specific image for events
+                src="/heroimage.jpg" //images
                 alt={selectedEvent.title}
                 className="img-fluid rounded mb-4"
                 style={{

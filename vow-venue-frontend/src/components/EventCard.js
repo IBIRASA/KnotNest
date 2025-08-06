@@ -3,7 +3,7 @@ import { Card, Button } from 'react-bootstrap';
 import PropTypes from 'prop-types';
 
 const EventCard = ({ event, onEdit, onDelete, onViewDetails }) => {
-  // Corrected line 5
+  //
   if (!event) {
     return null;
   }
@@ -52,7 +52,7 @@ const EventCard = ({ event, onEdit, onDelete, onViewDetails }) => {
             <i className="fas fa-map-marker-alt me-2 text-success"></i>
             {event.location}
           </Card.Text>
-          {/* Display only the first sentence or a snippet of the description */}
+          {/*  */}
           <Card.Text
             className="text-secondary mb-3"
             style={{ fontSize: '0.9rem', lineHeight: '1.4' }}
