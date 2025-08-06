@@ -1,3 +1,6 @@
+# .github/workflows/frontend-cd.yml
+# This workflow automates the Continuous Deployment for the KnotNest Frontend
+# within a monorepo structure, supporting develop/main branching.
 
 name: Monorepo Frontend CI/CD Pipeline
 
@@ -69,9 +72,9 @@ jobs:
         uses: azure/docker-login@v1
         with:
           login-server: ${{ env.AZURE_CONTAINER_REGISTRY }}
-          # Removed username and password here.
-          # This action can now infer credentials from the Azure login context
-          # established by the previous 'Log in to Azure' step.
+          # Explicitly provide username and password for robustness
+          username: ${{ secrets.ACR_LOGIN_SERVER }} # Typically the login server itself
+          password: ${{ secrets.AZURE_CREDENTIALS | fromJson | .clientSecret }} # Extract clientSecret from AZURE_CREDENTIALS
 
       - name: Build and Push Docker Image (Frontend)
         if: github.ref == 'refs/heads/main'
