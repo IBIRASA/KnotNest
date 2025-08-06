@@ -2,12 +2,8 @@ import React from 'react';
 import { Card, Button } from 'react-bootstrap';
 import PropTypes from 'prop-types';
 
-const EventCard = ({
-  event,
-  onEdit,
-  onDelete,
-  onViewDetails
-}) => {
+const EventCard = ({ event, onEdit, onDelete, onViewDetails }) => {
+  // Corrected line 5
   if (!event) {
     return null;
   }
