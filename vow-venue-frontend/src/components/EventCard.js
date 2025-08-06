@@ -1,19 +1,10 @@
 import React from 'react';
 import { Card, Button } from 'react-bootstrap';
-
-// <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" xintegrity="sha512-Fo3rlrZj/k7ujTnHg4CGR2D7kSs0V4LLanw2qksYuRlEzO+tcaEPQogQ0KaoGN26/zrn20ImR1DfuLWnOo7aBA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
-
 import PropTypes from 'prop-types';
 
-const EventCard = ({
-  event, //
-  onEdit,
-  onDelete,
-  onViewDetails
-}) => {
-  //
+const EventCard = ({ event, onEdit, onDelete, onViewDetails }) => {
   if (!event) {
-    return null; //
+    return null;
   }
 
   return (
@@ -35,7 +26,7 @@ const EventCard = ({
     >
       <Card.Img
         variant="top"
-        src="/heroimage.jpg" //
+        src="/heroimage.jpg"
         alt={`Cover for ${event.title}`}
         style={{
           height: '200px',
@@ -74,8 +65,7 @@ const EventCard = ({
           style={{ fontSize: '0.85rem' }}
         >
           <span>
-            <i className="fas fa-calendar-alt me-2 text-info"></i>{' '}
-            {/* Changed icon for date */}
+            <i className="fas fa-calendar-alt me-2 text-info"></i>
             Date: {event.date}
           </span>
           <span>
@@ -96,7 +86,7 @@ const EventCard = ({
             onClick={(e) => {
               e.stopPropagation();
               onViewDetails(event);
-            }} //
+            }}
           >
             <i
               className="fas fa-eye text-primary"
@@ -144,9 +134,8 @@ EventCard.propTypes = {
     title: PropTypes.string.isRequired,
     description: PropTypes.string.isRequired,
     location: PropTypes.string.isRequired,
-    date: PropTypes.string.isRequired, //
+    date: PropTypes.string.isRequired,
     is_available: PropTypes.bool.isRequired
-    //
   }).isRequired,
   onEdit: PropTypes.func.isRequired,
   onDelete: PropTypes.func.isRequired,

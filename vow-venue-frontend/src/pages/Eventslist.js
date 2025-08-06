@@ -27,11 +27,11 @@ const EventList = () => {
   const [selectedEvent, setSelectedEvent] = useState(null); // Changed to selectedEvent
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [showDeleteConfirmModal, setShowDeleteConfirmModal] = useState(false);
-  const [eventToDeleteId, setEventToDeleteId] = useState(null); 
+  const [eventToDeleteId, setEventToDeleteId] = useState(null);
 
   // Get the API base URL from the environment variable
   // This will be set by your GitHub Actions workflow during build
-  const API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
+  const API_BASE_URL = process.env.REACT_APP_API_BASE_URL; // Corrected line 30
 
   // Simulate fetching data from a Django backend
   const fetchEvents = useCallback(async () => {
@@ -326,5 +326,4 @@ const EventList = () => {
     </Container>
   );
 };
-
 export default EventList;
