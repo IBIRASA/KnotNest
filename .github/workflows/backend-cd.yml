@@ -1,4 +1,6 @@
-
+# .github/workflows/backend-cd.yml
+# This workflow automates the Continuous Deployment for the KnotNest Backend
+# within a monorepo structure, supporting develop/main branching.
 
 name: Monorepo Backend CI/CD Pipeline
 
@@ -16,6 +18,9 @@ on:
     paths:
       - 'vowvenue_backend/**' # Only trigger if changes are in the backend directory
 
+  # Allows manual triggering from GitHub Actions UI
+  workflow_dispatch:
+
 env:
   # Environment variables for the workflow
   AZURE_CONTAINER_REGISTRY: knotcontaineracr123.azurecr.io # Your ACR login server
@@ -27,6 +32,10 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # Enable debug logging for the workflow run (useful for troubleshooting)
+      - name: Enable Debug Logging
+        run: echo "ACTIONS_STEP_DEBUG=true" >> $GITHUB_ENV
+
       - name: Checkout Repository
         uses: actions/checkout@v4
 
@@ -61,13 +70,12 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      # New step to extract clientSecret into an environment variable
-      - name: Extract Client Secret
+      # NEW: Extract Client ID and Secret into environment variables for Docker login
+      - name: Extract Client ID and Secret
         if: github.ref == 'refs/heads/main'
-        id: get_client_secret
         run: |
-          CLIENT_SECRET=$(echo '${{ secrets.AZURE_CREDENTIALS }}' | jq -r '.clientSecret')
-          echo "CLIENT_SECRET=$CLIENT_SECRET" >> $GITHUB_ENV
+          echo "CLIENT_ID=$(echo '${{ secrets.AZURE_CREDENTIALS }}' | jq -r '.clientId')" >> $GITHUB_ENV
+          echo "CLIENT_SECRET=$(echo '${{ secrets.AZURE_CREDENTIALS }}' | jq -r '.clientSecret')" >> $GITHUB_ENV
         shell: bash
 
       - name: Log in to Azure Container Registry
@@ -75,8 +83,10 @@ jobs:
         uses: azure/docker-login@v1
         with:
           login-server: ${{ env.AZURE_CONTAINER_REGISTRY }}
-          username: ${{ secrets.ACR_LOGIN_SERVER }}
-          password: ${{ env.CLIENT_SECRET }} # Use the extracted environment variable
+          # Use the extracted environment variable for username (Service Principal's Client ID)
+          username: ${{ env.CLIENT_ID }}
+          # Use the extracted environment variable for password (Service Principal's Client Secret)
+          password: ${{ env.CLIENT_SECRET }}
 
       - name: Build and Push Docker Image (Backend)
         if: github.ref == 'refs/heads/main'
